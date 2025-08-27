@@ -917,4 +917,4 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
   );
 };
 
-export default AssetManagement;-
+export default AssetManagement;
