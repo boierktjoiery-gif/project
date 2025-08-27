@@ -51,12 +51,12 @@ const ExchangeRates: React.FC<ExchangeRatesProps> = ({
 
   // caches for resilience
   const [cachedPrices, setCachedPrices] = useState<Record<string, number>>({});
-  const [cachedHighs, setCachedHighs] = useState<Record<string, number>>({});
+  const [cachedHighs] = useState<Record<string, number>>({}); // kept for structure parity
 
   // a11y live region
   const liveRegionRef = useRef<HTMLDivElement | null>(null);
 
-  // central configs
+  // central configs (kept same)
   const rateConfigs = [
     { id: 'bitcoin',     symbol: 'BTC',  name: 'Bitcoin',   markup: 5,  icon: '₿', volume: '$5.2M' },
     { id: 'ethereum',    symbol: 'ETH',  name: 'Ethereum',  markup: 5,  icon: 'Ξ', volume: '$2.8M' },
@@ -69,51 +69,117 @@ const ExchangeRates: React.FC<ExchangeRatesProps> = ({
   const keyFor = (sym: string, fiat: string) => `${sym}_${fiat.toLowerCase()}`;
   const fiat = selectedFiat.toLowerCase();
 
-  // Fetch live rates (with robust fallbacks)
+  const formatPrice = (price: number) => {
+    if (price < 1) return price.toFixed(4);
+    if (price < 100) return price.toFixed(2);
+    return price.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  };
+
+  const getCurrencySymbol = () => {
+    const symbols: Record<string, string> = {
+      usd: '$',
+      eur: '€',
+      inr: '₹',
+      gbp: '£',
+    };
+    return symbols[fiat] || '$';
+  };
+
+  const fmtVol = (n: number) => {
+    if (!Number.isFinite(n)) return '$0';
+    const abs = Math.abs(n);
+    if (abs >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+    if (abs >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+    if (abs >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+    return `$${Math.round(n)}`;
+  };
+
+  // Fetch live rates (LiveCoinWatch), robust fallbacks, keeps your state shape
   const fetchLiveRates = async () => {
     setIsRefreshing(true);
     setApiError(null);
 
-    const ids = rateConfigs.map((r) => r.id).join(',');
-    const baseUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${encodeURIComponent(
-      fiat
-    )}&ids=${encodeURIComponent(ids)}&price_change_percentage=24h`;
-
-    const tryFetch = async (url: string) => {
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
+    // map ids -> LCW codes
+    const codeMap: Record<string, 'BTC' | 'ETH' | 'USDT' | 'USDC' | 'BNB'> = {
+      bitcoin: 'BTC',
+      ethereum: 'ETH',
+      tether: 'USDT',
+      'usd-coin': 'USDC',
+      binancecoin: 'BNB',
     };
 
     try {
-      let marketData: any[] | null = null;
+      const codes = rateConfigs
+        .map((r) => codeMap[r.id])
+        .filter(Boolean) as Array<'BTC' | 'ETH' | 'USDT' | 'USDC' | 'BNB'>;
 
-      try {
-        marketData = await tryFetch(baseUrl);
-      } catch {
-        // basic proxy fallback for CORS/network
-        const proxyUrl = 'https://api.allorigins.win/get?url=';
-        const resp = await fetch(proxyUrl + encodeURIComponent(baseUrl));
-        if (!resp.ok) throw new Error(`Proxy HTTP ${resp.status}`);
-        const proxyPayload = await resp.json();
-        marketData = JSON.parse(proxyPayload.contents);
+      // primary: /coins/map (use limit=codes.length)
+      const mapResp = await fetch('https://api.livecoinwatch.com/coins/map', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': '32821bd9-f016-48d4-b4a2-41e34dc054be', // move to server in prod
+        },
+        body: JSON.stringify({
+          codes,
+          currency: selectedFiat.toUpperCase(), // 'USD' | 'INR' | 'EUR' | 'GBP'
+          sort: 'code',
+          order: 'ascending',
+          offset: 0,
+          limit: codes.length,
+          meta: false,
+        }),
+      });
+      if (!mapResp.ok) throw new Error(`HTTP ${mapResp.status}`);
+
+      let data: Array<{ code: string; rate: number; volume?: number; delta?: { day?: number } }> =
+        await mapResp.json();
+
+      // fallback: some dev envs may return []
+      if (!Array.isArray(data) || data.length === 0) {
+        const singles = await Promise.all(
+          codes.map(async (code) => {
+            try {
+              const r = await fetch('https://api.livecoinwatch.com/coins/single', {
+                method: 'POST',
+                headers: {
+                  'content-type': 'application/json',
+                  'x-api-key': '32821bd9-f016-48d4-b4a2-41e34dc054be',
+                },
+                body: JSON.stringify({
+                  code,
+                  currency: selectedFiat.toUpperCase(),
+                  meta: false,
+                }),
+              });
+              if (!r.ok) return null;
+              const j = await r.json();
+              return { code: j?.code, rate: j?.rate, volume: j?.volume, delta: j?.delta };
+            } catch {
+              return null;
+            }
+          })
+        );
+        data = singles.filter(Boolean) as Array<{
+          code: string;
+          rate: number;
+          volume?: number;
+          delta?: { day?: number };
+        }>;
+        if (data.length === 0) throw new Error('Empty market data');
       }
 
-      if (!Array.isArray(marketData) || marketData.length === 0) {
-        throw new Error('Empty market data');
-      }
+      // index
+      const byCode: Record<string, { rate: number; volume?: number; delta?: { day?: number } }> = {};
+      for (const row of data) if (row?.code) byCode[row.code] = row;
 
-      const byId: Record<string, any> = {};
-      for (const row of marketData) {
-        if (row?.id) byId[row.id] = row;
-      }
-
+      // build LiveRate[] using existing config
       const nextRates: LiveRate[] = rateConfigs.map((cfg) => {
-        const row = byId[cfg.id] || {};
-        const current = Number(row.current_price) || 0;
-        const high24h = Number(row.high_24h) || 0;
+        const code = codeMap[cfg.id];
+        const row = code ? byCode[code] : undefined;
 
-        let marketPrice = current > 0 ? current : high24h > 0 ? high24h : 0;
+        const current = Number(row?.rate) || 0;
+        let marketPrice = current;
         if (!(marketPrice > 0)) {
           const k = keyFor(cfg.symbol, fiat);
           marketPrice =
@@ -122,16 +188,15 @@ const ExchangeRates: React.FC<ExchangeRatesProps> = ({
             getDefaultPrice(cfg.symbol, fiat);
         }
 
-        const k = keyFor(cfg.symbol, fiat);
-        if (current > 0) setCachedPrices((prev) => ({ ...prev, [k]: current }));
-        if (high24h > 0) setCachedHighs((prev) => ({ ...prev, [k]: high24h }));
-
-        let change24h = 0;
-        if (typeof row.price_change_percentage_24h_in_currency === 'number') {
-          change24h = row.price_change_percentage_24h_in_currency;
-        } else if (typeof row.price_change_percentage_24h === 'number') {
-          change24h = row.price_change_percentage_24h;
+        // cache last good price
+        if (current > 0) {
+          const k = keyFor(cfg.symbol, fiat);
+          setCachedPrices((prev) => ({ ...prev, [k]: current }));
         }
+
+        // LCW delta.day is a ratio (1.0123 => +1.23%)
+        const change24h =
+          typeof row?.delta?.day === 'number' ? (row.delta.day - 1) * 100 : 0;
 
         const exchangePrice = marketPrice * (1 + cfg.markup / 100);
 
@@ -142,7 +207,7 @@ const ExchangeRates: React.FC<ExchangeRatesProps> = ({
           exchangePrice,
           markup: cfg.markup,
           change24h,
-          volume: cfg.volume,
+          volume: fmtVol(Number(row?.volume) || 0),
           icon: cfg.icon,
         };
       });
@@ -151,7 +216,6 @@ const ExchangeRates: React.FC<ExchangeRatesProps> = ({
       const now = new Date();
       setLastUpdated(now);
 
-      // announce to screen readers
       if (liveRegionRef.current) {
         liveRegionRef.current.textContent = `Rates updated at ${now.toLocaleTimeString()}`;
       }
@@ -161,15 +225,14 @@ const ExchangeRates: React.FC<ExchangeRatesProps> = ({
       console.error('Failed to fetch live rates:', err);
       setApiError(err?.message || 'Failed to fetch live rates');
 
+      // graceful fallback using caches/defaults
       const fallbackRates: LiveRate[] = rateConfigs.map((cfg) => {
         const k = keyFor(cfg.symbol, fiat);
         const marketPrice =
           (cachedHighs[k] ?? 0) ||
           (cachedPrices[k] ?? 0) ||
           getDefaultPrice(cfg.symbol, fiat);
-
         const exchangePrice = marketPrice * (1 + cfg.markup / 100);
-
         return {
           symbol: cfg.symbol,
           name: cfg.name,
@@ -193,28 +256,12 @@ const ExchangeRates: React.FC<ExchangeRatesProps> = ({
     }
   };
 
-  // Auto-refresh every 10s (was 30s)
+  // Auto-refresh every 2s
   useEffect(() => {
     fetchLiveRates();
-    const interval = setInterval(fetchLiveRates, 10000);
+    const interval = setInterval(fetchLiveRates, 2000);
     return () => clearInterval(interval);
-  }, [selectedFiat]); // keep dependency identical to original
-
-  const formatPrice = (price: number) => {
-    if (price < 1) return price.toFixed(4);
-    if (price < 100) return price.toFixed(2);
-    return price.toLocaleString(undefined, { maximumFractionDigits: 0 });
-  };
-
-  const getCurrencySymbol = () => {
-    const symbols: Record<string, string> = {
-      usd: '$',
-      eur: '€',
-      inr: '₹',
-      gbp: '£',
-    };
-    return symbols[fiat] || '$';
-  };
+  }, [selectedFiat]); // dependency identical to original
 
   return (
     <div
@@ -533,10 +580,10 @@ const ExchangeRates: React.FC<ExchangeRatesProps> = ({
                 ) : (
                   <>
                     <span className="hidden sm:inline">
-                      Market rates update every <strong>10 seconds</strong> • Exchange rates include processing fees
+                      Market rates update every <strong>2 seconds</strong> • Exchange rates include processing fees
                     </span>
                     <span className="sm:hidden">
-                      Updates every <strong>10s</strong> • Includes fees
+                      Updates every <strong>2s</strong> • Includes fees
                     </span>
                   </>
                 )}
