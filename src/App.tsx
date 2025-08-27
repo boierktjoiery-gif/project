@@ -160,63 +160,98 @@ useEffect(() => {
   // Fetch Live Exchange Rates
 useEffect(() => {
   const ids = 'bitcoin,ethereum,tether,usd-coin,dai';
-  const markups: Record<string, number> = { bitcoin: 0.02, ethereum: 0.02, 'usd-coin': 0.1, dai: 0.1, tether: 0.1 };
+  const markups: Record<string, number> = {
+    bitcoin: 0.02,
+    ethereum: 0.02,
+    'usd-coin': 0.1,
+    dai: 0.1,
+    tether: 0.1
+  };
 
   const fetchRates = async () => {
     try {
-      // LiveCoinWatch expects CODES (BTC/ETH/USDT/USDC/DAI), not ids.
-      const codeMap: Record<string, string> = {
+      // map your ids -> LiveCoinWatch codes
+      const codeMap: Record<string, 'BTC' | 'ETH' | 'USDT' | 'USDC' | 'DAI'> = {
         bitcoin: 'BTC',
         ethereum: 'ETH',
         tether: 'USDT',
         'usd-coin': 'USDC',
         dai: 'DAI',
       };
-      const codes = ids.split(',').map(s => s.trim()).map(id => codeMap[id]).filter(Boolean);
+      const codes = ids.split(',').map(s => s.trim()).map(id => codeMap[id]).filter(Boolean) as Array<'BTC'|'ETH'|'USDT'|'USDC'|'DAI'>;
 
-      // Build POST body per LCW docs
-      const body = {
-        codes,
-        currency: selectedFiat.toUpperCase(), // e.g. 'USD' | 'INR' | 'EUR' | 'GBP'
-        sort: 'code',
-        order: 'ascending',
-        offset: 0,
-        limit: 0, // 0 -> use length of `codes`
-        meta: false,
-      };
-
-      const resp = await fetch('https://api.livecoinwatch.com/coins/map', {
+      // primary: /coins/map (ensure limit=codes.length, NOT 0)
+      const mapResp = await fetch('https://api.livecoinwatch.com/coins/map', {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
           'x-api-key': '32821bd9-f016-48d4-b4a2-41e34dc054be',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          codes,
+          currency: selectedFiat.toUpperCase(),
+          sort: 'code',
+          order: 'ascending',
+          offset: 0,
+          limit: codes.length,
+          meta: false,
+        }),
       });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data: Array<{ code: string; rate: number; volume?: number }> = await resp.json();
-      if (!Array.isArray(data) || data.length === 0) throw new Error('Empty market data');
+      if (!mapResp.ok) throw new Error(`HTTP ${mapResp.status}`);
 
-      // Prepare a `prices` object shaped like the old Coingecko response
+      let data: Array<{ code: string; rate: number; volume?: number }> = await mapResp.json();
+
+      // fallback: some environments may return [] — fetch singles
+      if (!Array.isArray(data) || data.length === 0) {
+        const singles = await Promise.all(
+          codes.map(async (code) => {
+            try {
+              const r = await fetch('https://api.livecoinwatch.com/coins/single', {
+                method: 'POST',
+                headers: {
+                  'content-type': 'application/json',
+                  'x-api-key': '32821bd9-f016-48d4-b4a2-41e34dc054be',
+                },
+                body: JSON.stringify({
+                  code,
+                  currency: selectedFiat.toUpperCase(),
+                  meta: false,
+                }),
+              });
+              if (!r.ok) return null;
+              const j = await r.json();
+              return { code: j?.code, rate: j?.rate, volume: j?.volume };
+            } catch {
+              return null;
+            }
+          })
+        );
+        data = singles.filter(Boolean) as Array<{ code: string; rate: number; volume?: number }>;
+        if (data.length === 0) throw new Error('Empty market data');
+      }
+
+      // shape a "prices" object like your old Coingecko structure
       const byCode: Record<string, { rate: number; volume?: number }> = {};
       for (const row of data) byCode[row.code] = row;
 
       const prices: any = {
-        bitcoin:     { [selectedFiat]: byCode.BTC?.rate  ?? 0 },
-        ethereum:    { [selectedFiat]: byCode.ETH?.rate  ?? 0 },
-        tether:      { [selectedFiat]: byCode.USDT?.rate ?? 0 },
-        'usd-coin':  { [selectedFiat]: byCode.USDC?.rate ?? 0 },
-        dai:         { [selectedFiat]: byCode.DAI?.rate  ?? 0 },
+        bitcoin:    { [selectedFiat]: byCode.BTC?.rate  ?? 0 },
+        ethereum:   { [selectedFiat]: byCode.ETH?.rate  ?? 0 },
+        tether:     { [selectedFiat]: byCode.USDT?.rate ?? 0 },
+        'usd-coin': { [selectedFiat]: byCode.USDC?.rate ?? 0 },
+        dai:        { [selectedFiat]: byCode.DAI?.rate  ?? 0 },
       };
 
+      // keep your original setExchangeRates shape & markup labels
       setExchangeRates([
-        { pair: `BTC/${selectedFiat.toUpperCase()}`,  rate: (prices.bitcoin[selectedFiat]      * (1 + markups.bitcoin)).toFixed(2),     markup: '+5%',  volume: '$5.1M' },
-        { pair: `ETH/${selectedFiat.toUpperCase()}`,  rate: (prices.ethereum[selectedFiat]     * (1 + markups.ethereum)).toFixed(2),    markup: '+5%',  volume: '$2.4M' },
-        { pair: `USDT/${selectedFiat.toUpperCase()}`, rate: (prices.tether[selectedFiat]       * (1 + markups.tether)).toFixed(2),      markup: '+25%', volume: '$3.2M' },
-        { pair: `USDC/${selectedFiat.toUpperCase()}`, rate: (prices['usd-coin'][selectedFiat]  * (1 + markups['usd-coin'])).toFixed(2), markup: '+20%', volume: '$1.8M' },
-        { pair: `DAI/${selectedFiat.toUpperCase()}`,  rate: (prices.dai[selectedFiat]          * (1 + markups.dai)).toFixed(2),         markup: '+20%', volume: '$890K' }
+        { pair: `BTC/${selectedFiat.toUpperCase()}`,  rate: (prices.bitcoin[selectedFiat]     * (1 + markups.bitcoin)).toFixed(2),     markup: '+5%',  volume: '$5.1M' },
+        { pair: `ETH/${selectedFiat.toUpperCase()}`,  rate: (prices.ethereum[selectedFiat]    * (1 + markups.ethereum)).toFixed(2),    markup: '+5%',  volume: '$2.4M' },
+        { pair: `USDT/${selectedFiat.toUpperCase()}`, rate: (prices.tether[selectedFiat]      * (1 + markups.tether)).toFixed(2),      markup: '+25%', volume: '$3.2M' },
+        { pair: `USDC/${selectedFiat.toUpperCase()}`, rate: (prices['usd-coin'][selectedFiat] * (1 + markups['usd-coin'])).toFixed(2), markup: '+20%', volume: '$1.8M' },
+        { pair: `DAI/${selectedFiat.toUpperCase()}`,  rate: (prices.dai[selectedFiat]         * (1 + markups.dai)).toFixed(2),         markup: '+20%', volume: '$890K' }
       ]);
     } catch {
+      // unchanged fallback
       setExchangeRates([
         { pair: 'BTC/USD',  rate: '122633.58', markup: '+2%',  volume: '$52.1M' },
         { pair: 'ETH/USD',  rate: '3814.84',   markup: '+2%',  volume: '$21.4M' },
