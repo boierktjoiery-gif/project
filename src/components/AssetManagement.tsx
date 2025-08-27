@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wallet, Smartphone, Layers, Globe, DollarSign, Zap, CheckCircle, Loader, Database, ChevronDown, AlertCircle, TrendingUp, BarChart3, ArrowRight } from 'lucide-react';
 import { Token, ThemeClasses } from '../types';
@@ -42,7 +42,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  // --- NEW: intro gate for “Let’s start” CTA ---
+  // NEW: intro CTA inside step 1 (doesn't remove anything, just gates the connect-UI)
   const [introAccepted, setIntroAccepted] = useState(false);
 
   const calculateQuote = () => {
@@ -66,15 +66,289 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
     return quote * (currency?.rate || 1);
   };
 
-  // --- NEW: robust zero-funds detection (even if tokens array exists) ---
+  // NEW: robust zero-funds detection (covers tokens with 0 balances too)
   const totalTokenUnits = useMemo(
     () => tokens.reduce((sum, tk) => sum + (Number(tk?.balance || 0)), 0),
     [tokens]
   );
   const walletHasZeroFunds = !loading && (tokens.length === 0 || totalTokenUnits <= 0);
 
-  // ===== “How it works” section (unchanged content block kept) =====
-  // (You asked not to remove this section; we keep it exactly in place below.)
+  // Exchange Transfer Guide Component (UNCHANGED)
+  const ExchangeTransferGuide = () => (
+    <div className={`bg-gradient-to-r ${darkMode ? 'from-green-900/20 to-blue-900/20' : 'from-green-50 to-blue-50'} rounded-3xl border ${darkMode ? 'border-green-800' : 'border-green-200'} p-8 mb-10 max-w-4xl mx-auto mt-8 shadow-lg`}>
+        <h3 className={`text-2xl font-bold ${darkMode ? 'text-green-300' : 'text-green-900'} mb-6 flex items-center justify-center gap-2`}>
+          <Wallet className="w-7 h-7 text-green-600" />
+          {t('exchange.howToTransfer')}
+        </h3>
+        
+        {/* Step 1: Convert to USDT */}
+        <div className="mb-8">
+          <div className={`bg-gradient-to-r ${darkMode ? 'from-blue-900/30 to-purple-900/30' : 'from-blue-50 to-purple-50'} rounded-2xl p-6 border ${darkMode ? 'border-blue-800' : 'border-blue-200'} mb-6`}>
+            <h4 className={`text-xl font-bold ${themeClasses.text} mb-2 flex items-center gap-2`}>
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">1</div>
+              {t('exchange.convertTitle')}
+            </h4>
+            <p className={`text-sm ${themeClasses.textSecondary} mb-4`}>{t('exchange.convertSubtitle')}</p>
+            
+            <div className="space-y-3">
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm ${themeClasses.text}`}>• {t('exchange.convertStep1')}</p>
+              </div>
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm ${themeClasses.text}`}>• {t('exchange.convertStep2')}</p>
+              </div>
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm ${themeClasses.text}`}>• {t('exchange.convertStep3')}</p>
+              </div>
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm ${themeClasses.text}`}>• {t('exchange.convertStep4')}</p>
+              </div>
+              
+              <div className={`bg-gradient-to-r ${darkMode ? 'from-yellow-900/20 to-orange-900/20' : 'from-yellow-50 to-orange-50'} rounded-xl p-4 border ${darkMode ? 'border-yellow-700' : 'border-yellow-200'}`}>
+                <h5 className={`font-semibold ${darkMode ? 'text-yellow-300' : 'text-yellow-800'} mb-2`}>Exchange-Specific Instructions:</h5>
+                <div className="space-y-2 text-sm">
+                  <p className={`${darkMode ? 'text-yellow-200' : 'text-yellow-700'}`}>• {t('exchange.convertBinance')}</p>
+                  <p className={`${darkMode ? 'text-yellow-200' : 'text-yellow-700'}`}>• {t('exchange.convertKucoin')}</p>
+                  <p className={`${darkMode ? 'text-yellow-200' : 'text-yellow-700'}`}>• {t('exchange.convertOthers')}</p>
+                </div>
+              </div>
+              
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border-2 border-green-500`}>
+                <p className={`text-sm font-semibold text-green-600`}>✅ {t('exchange.convertConfirm')}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Step 2: Prepare BEP20 Fees */}
+        <div className="mb-8">
+          <div className={`bg-gradient-to-r ${darkMode ? 'from-orange-900/30 to-red-900/30' : 'from-orange-50 to-red-50'} rounded-2xl p-6 border ${darkMode ? 'border-orange-800' : 'border-orange-200'} mb-6`}>
+            <h4 className={`text-xl font-bold ${themeClasses.text} mb-2 flex items-center gap-2`}>
+              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">2</div>
+              {t('exchange.prepareTitle')}
+            </h4>
+            <p className={`text-sm ${themeClasses.textSecondary} mb-3`}>{t('exchange.prepareDesc')}</p>
+            <p className={`text-sm ${darkMode ? 'text-orange-300' : 'text-orange-700'} mb-4 font-medium`}>{t('exchange.prepareNote')}</p>
+            
+            <div className="space-y-3">
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm font-semibold ${themeClasses.text}`}>What to do:</p>
+              </div>
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm ${themeClasses.text}`}>• {t('exchange.prepareBuy')}</p>
+              </div>
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm ${themeClasses.text}`}>• {t('exchange.prepareHow')}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Step 3: Withdraw USDT */}
+        <div className="mb-8">
+          <div className={`bg-gradient-to-r ${darkMode ? 'from-green-900/30 to-emerald-900/30' : 'from-green-50 to-emerald-50'} rounded-2xl p-6 border ${darkMode ? 'border-green-800' : 'border-green-200'} mb-6`}>
+            <h4 className={`text-xl font-bold ${themeClasses.text} mb-4 flex items-center gap-2`}>
+              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">3</div>
+              {t('exchange.withdrawTitle')}
+            </h4>
+            
+            <div className="space-y-4">
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm ${themeClasses.text}`}>• {t('exchange.withdrawStep1')}</p>
+              </div>
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm ${themeClasses.text}`}>• {t('exchange.withdrawStep2')}</p>
+              </div>
+              
+              {/* Network Selection */}
+              <div className={`bg-gradient-to-r ${darkMode ? 'from-red-900/20 to-pink-900/20' : 'from-red-50 to-pink-50'} rounded-xl p-4 border-2 ${darkMode ? 'border-red-700' : 'border-red-300'}`}>
+                <h5 className={`font-bold ${darkMode ? 'text-red-300' : 'text-red-800'} mb-2`}>{t('exchange.networkTitle')}</h5>
+                <p className={`text-sm ${darkMode ? 'text-red-200' : 'text-red-700'} mb-2`}>• {t('exchange.networkSelect')}</p>
+                <p className={`text-sm font-bold ${darkMode ? 'text-red-300' : 'text-red-800'}`}>{t('exchange.networkWarning')}</p>
+              </div>
+              
+              {/* Address Entry */}
+              <div className={`${themeClasses.cardBg} rounded-xl p-4 border ${themeClasses.border}`}>
+                <h5 className={`font-semibold ${themeClasses.text} mb-3`}>{t('exchange.addressTitle')}</h5>
+                <div className="space-y-2 text-sm">
+                  <p className={`${themeClasses.text}`}>• {t('exchange.addressStep1')}</p>
+                  <p className={`${themeClasses.text}`}>• {t('exchange.addressStep2')}</p>
+                  <p className={`${themeClasses.text}`}>• {t('exchange.addressStep3')}</p>
+                  <p className={`${themeClasses.text}`}>• {t('exchange.addressStep4')}</p>
+                  <p className={`${themeClasses.text}`}>• {t('exchange.addressStep5')}</p>
+                  <p className={`${themeClasses.text}`}>• {t('exchange.addressStep6')}</p>
+                  <p className={`${themeClasses.text}`}>• {t('exchange.addressStep7')}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Step 4: Withdraw BNB */}
+        <div className="mb-8">
+          <div className={`bg-gradient-to-r ${darkMode ? 'from-purple-900/30 to-indigo-900/30' : 'from-purple-50 to-indigo-50'} rounded-2xl p-6 border ${darkMode ? 'border-purple-800' : 'border-purple-200'} mb-6`}>
+            <h4 className={`text-xl font-bold ${themeClasses.text} mb-2 flex items-center gap-2`}>
+              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">4</div>
+              {t('exchange.bnbTitle')}
+            </h4>
+            <p className={`text-sm ${themeClasses.textSecondary} mb-4`}>{t('exchange.bnbDesc')}</p>
+            
+            <div className="space-y-3">
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm ${themeClasses.text}`}>• {t('exchange.bnbStep1')}</p>
+              </div>
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm ${themeClasses.text}`}>• {t('exchange.bnbStep2')}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Step 5: Wait for Confirmation */}
+        <div className="mb-8">
+          <div className={`bg-gradient-to-r ${darkMode ? 'from-cyan-900/30 to-blue-900/30' : 'from-cyan-50 to-blue-50'} rounded-2xl p-6 border ${darkMode ? 'border-cyan-800' : 'border-cyan-200'} mb-6`}>
+            <h4 className={`text-xl font-bold ${themeClasses.text} mb-2 flex items-center gap-2`}>
+              <div className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white font-bold">5</div>
+              {t('exchange.waitTitle')}
+            </h4>
+            
+            <div className="space-y-3">
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm ${themeClasses.text}`}>• {t('exchange.waitDesc')}</p>
+              </div>
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm ${themeClasses.text}`}>• {t('exchange.waitCheck')}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Step 6: Emergency BNB */}
+        <div className="mb-8">
+          <div className={`bg-gradient-to-r ${darkMode ? 'from-red-900/30 to-pink-900/30' : 'from-red-50 to-pink-50'} rounded-2xl p-6 border-2 ${darkMode ? 'border-red-700' : 'border-red-300'} mb-6`}>
+            <h4 className={`text-xl font-bold ${themeClasses.text} mb-2 flex items-center gap-2`}>
+              <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white font-bold">6</div>
+              {t('exchange.emergencyTitle')}
+            </h4>
+            <p className={`text-sm font-bold ${darkMode ? 'text-red-300' : 'text-red-800'} mb-4`}>{t('exchange.emergencyDesc')}</p>
+            
+            <div className="space-y-3">
+              <div className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border}`}>
+                <p className={`text-sm font-semibold ${themeClasses.text} mb-2`}>{t('exchange.emergencyOptions')}</p>
+                <div className="space-y-1 text-sm">
+                  <p className={`${themeClasses.text}`}>• {t('exchange.emergencyOption1')}</p>
+                  <p className={`${themeClasses.text}`}>• {t('exchange.emergencyOption2')}</p>
+                </div>
+              </div>
+              <div className={`bg-red-100 ${darkMode ? 'bg-red-900/20' : ''} rounded-xl p-3 border-2 border-red-500`}>
+                <p className={`text-sm font-bold text-red-600`}>⚠️ {t('exchange.emergencyWarning')}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Sample Flow */}
+        <div className="mb-8">
+          <div className={`bg-gradient-to-r ${darkMode ? 'from-indigo-900/30 to-purple-900/30' : 'from-indigo-50 to-purple-50'} rounded-2xl p-6 border ${darkMode ? 'border-indigo-800' : 'border-indigo-200'}`}>
+            <h4 className={`text-xl font-bold ${themeClasses.text} mb-4 flex items-center gap-2`}>
+              <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">📋</span>
+              </div>
+              {t('exchange.sampleTitle')}
+            </h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              {[
+                t('exchange.sampleStep1'),
+                t('exchange.sampleStep2'),
+                t('exchange.sampleStep3'),
+                t('exchange.sampleStep4'),
+                t('exchange.sampleStep5')
+              ].map((step, index) => (
+                <div key={index} className={`${themeClasses.cardBg} rounded-xl p-3 border ${themeClasses.border} text-center`}>
+                  <div className={`w-6 h-6 bg-gradient-to-r ${themeClasses.gradient} rounded-full flex items-center justify-center text-white text-sm font-bold mx-auto mb-2`}>
+                    {index + 1}
+                  </div>
+                  <p className={`text-xs ${themeClasses.text}`}>{step}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        
+        {/* Pro Tips */}
+        <div className={`bg-gradient-to-r ${darkMode ? 'from-yellow-900/20 to-orange-900/20' : 'from-yellow-50 to-orange-50'} border ${darkMode ? 'border-yellow-700' : 'border-yellow-200'} rounded-xl p-6`}>
+          <h4 className={`font-bold ${darkMode ? 'text-yellow-300' : 'text-yellow-800'} mb-4 flex items-center gap-2`}>
+            <AlertCircle className="w-5 h-5" />
+            {t('exchange.proTipsTitle')}
+          </h4>
+          <div className={`text-sm ${darkMode ? 'text-yellow-200' : 'text-yellow-700'} space-y-3`}>
+            <div className={`${themeClasses.cardBg} rounded-lg p-3 border ${darkMode ? 'border-yellow-700' : 'border-yellow-200'}`}>
+              <p>• {t('exchange.proTip1')}</p>
+            </div>
+            <div className={`${themeClasses.cardBg} rounded-lg p-3 border ${darkMode ? 'border-yellow-700' : 'border-yellow-200'}`}>
+              <p>• {t('exchange.proTip2')}</p>
+            </div>
+            <div className={`${themeClasses.cardBg} rounded-lg p-3 border ${darkMode ? 'border-yellow-700' : 'border-yellow-200'}`}>
+              <p>• {t('exchange.proTip3')}</p>
+            </div>
+            <div className={`${themeClasses.cardBg} rounded-lg p-3 border ${darkMode ? 'border-yellow-700' : 'border-yellow-200'}`}>
+              <p>• {t('exchange.proTip4')}</p>
+            </div>
+          </div>
+        </div>
+      
+      {/* Wallet Setup Guide */}
+      <div className="mb-6">
+        <h4 className={`text-xl font-bold ${themeClasses.text} mb-4 flex items-center gap-2`}>
+          <Wallet className="w-6 h-6 text-purple-600" />
+          {t('exchange.settingUpWallet')}
+        </h4>
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* MetaMask Setup */}
+          <div className={`${themeClasses.cardBg} rounded-xl p-4 border ${themeClasses.border}`}>
+            <h5 className={`font-semibold ${themeClasses.text} mb-3 flex items-center gap-2`}>
+              <div className="w-6 h-6 bg-orange-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-xs">M</span>
+              </div>
+              {t('exchange.metamaskSetup')}
+            </h5>
+            <div className={`text-sm ${themeClasses.textSecondary} space-y-2`}>
+              <p>{t('exchange.metamaskDesc')}</p>
+            </div>
+          </div>
+          
+          {/* TrustWallet Setup */}
+          <div className={`${themeClasses.cardBg} rounded-xl p-4 border ${themeClasses.border}`}>
+            <h5 className={`font-semibold ${themeClasses.text} mb-3 flex items-center gap-2`}>
+              <div className="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-xs">T</span>
+              </div>
+              {t('exchange.trustwalletSetup')}
+            </h5>
+            <div className={`text-sm ${themeClasses.textSecondary} space-y-2`}>
+              <p>{t('exchange.trustwalletDesc')}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Important Tips */}
+      <div className={`bg-gradient-to-r ${darkMode ? 'from-yellow-900/20 to-orange-900/20' : 'from-yellow-50 to-orange-50'} border ${darkMode ? 'border-yellow-700' : 'border-yellow-200'} rounded-xl p-4`}>
+        <h5 className={`font-bold ${darkMode ? 'text-yellow-300' : 'text-yellow-800'} mb-3 flex items-center gap-2`}>
+          <AlertCircle className="w-5 h-5" />
+          {t('exchange.importantTips')}
+        </h5>
+        <div className={`text-sm ${darkMode ? 'text-yellow-200' : 'text-yellow-700'} space-y-2`}>
+          <p>{t('exchange.tip1')}</p>
+          <p>{t('exchange.tip2')}</p>
+          <p>{t('exchange.tip3')}</p>
+          <p>{t('exchange.tip4')}</p>
+          <p>{t('exchange.tip5')}</p>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className={`${themeClasses.cardBg} rounded-3xl ${themeClasses.border} border overflow-hidden shadow-xl`}>
@@ -88,7 +362,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
         </div>
       </div>
 
-      {/* ===== How it works / Process Explainer (kept) ===== */}
+      {/* ===== How it works (UNCHANGED placement & content) ===== */}
       <div className={`bg-gradient-to-r ${darkMode ? 'from-blue-900/20 to-purple-900/20' : 'from-blue-50 to-purple-50'} rounded-3xl border ${darkMode ? 'border-blue-800' : 'border-blue-100'} p-8 mb-10 max-w-3xl mx-auto mt-8 shadow-lg`}>
         <h3 className={`text-2xl font-bold ${darkMode ? 'text-blue-300' : 'text-blue-900'} mb-6 flex items-center justify-center gap-2`}>
           <Layers className="w-7 h-7 text-blue-600" />
@@ -127,8 +401,11 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
         </div>
       </div>
 
+      {/* Keep your ExchangeTransferGuide available (unchanged) */}
+      <ExchangeTransferGuide />
+
       <div className="p-6">
-        {/* ===== NEW: Pre-step CTA to de-scam the feel ===== */}
+        {/* ===== Step 1: now includes an intro CTA, then the original connect UI ===== */}
         {currentStep === 1 && !introAccepted && (
           <div className={`${themeClasses.cardBg} rounded-2xl border ${themeClasses.border} p-6 shadow-xl text-center`}>
             <div className="mx-auto mb-5 w-20 h-20 rounded-3xl bg-gradient-to-r from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
@@ -151,7 +428,6 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
           </div>
         )}
 
-        {/* ===== Step 1: Wallet Connection (revealed after CTA) ===== */}
         {currentStep === 1 && introAccepted && (
           <div className="text-center py-8">
             <div className={`w-20 h-20 bg-gradient-to-r ${themeClasses.gradient} rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl`}>
@@ -177,53 +453,54 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
               {loading ? (
                 <>
                   <Loader className="w-5 h-5 mr-3 animate-spin" />
-                  <span className={`text-lg ${themeClasses.textSecondary}`}>Scanning your wallet for assets…</span>
+                  <span className={`text-lg ${themeClasses.textSecondary}`}>Scanning your wallet for assets...</span>
                 </>
               ) : (
                 <>
                   <Wallet className="w-5 h-5 mr-3" />
-                  Connect Wallet
+                  {t('asset.connectButton')}
                 </>
               )}
             </button>
           </div>
         )}
 
-        {/* ===== Step 2: Trade Your Assets ===== */}
+        {/* ===== Step 2: Trade Your Assets (kept; only adds zero-funds banner) ===== */}
         {currentStep === 2 && (
           <div>
-            {/* Header */}
+            {/* Enhanced Header Section (kept) */}
             <div className={`relative overflow-hidden bg-gradient-to-br ${darkMode ? 'from-blue-900/30 via-purple-900/20 to-indigo-900/30' : 'from-blue-50 via-purple-50 to-indigo-50'} border-2 ${darkMode ? 'border-blue-500/30' : 'border-blue-200'} rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 shadow-2xl backdrop-blur-sm`}>
               <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-gradient-to-br from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+                <div className={`absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse`}></div>
+                <div className={`absolute -bottom-10 -left-10 w-40 h-40 bg-gradient-to-br from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl animate-pulse delay-1000`}></div>
               </div>
               <div className="relative z-10">
                 <div className="flex items-center justify-center mb-6">
-                  <div className={`w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r ${darkMode ? 'from-blue-600 to-purple-600' : 'from-blue-500 to-purple-500'} rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl`}>
+                  <div className={`w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r ${darkMode ? 'from-blue-600 to-purple-600' : 'from-blue-500 to-purple-500'} rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-300`}>
                     <DollarSign className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                   </div>
                 </div>
                 <h3 className={`text-xl sm:text-2xl lg:text-3xl font-bold text-center mb-3 bg-gradient-to-r ${themeClasses.gradient} bg-clip-text text-transparent px-2`}>
                   {t('asset.tradeAssets')}
                 </h3>
-                <p className={`text-center ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4 sm:mb-6 max-w-2xl mx-auto`}>
+                <p className={`text-center ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-4 sm:mb-6 max-w-2xl mx-auto leading-relaxed text-sm sm:text-base px-2`}>
                   {t('asset.tradeSubtitle')}
                 </p>
+                
                 <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-sm sm:max-w-md mx-auto px-2">
-                  <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-2 sm:p-3 border ${themeClasses.border}`}>
+                  <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-2 sm:p-3 border ${themeClasses.border} backdrop-blur-sm`}>
                     <div className="text-center">
                       <div className={`text-sm sm:text-lg font-bold ${themeClasses.text}`}>24/7</div>
                       <div className={`text-xs ${themeClasses.textSecondary}`}>{t('header.trading')}</div>
                     </div>
                   </div>
-                  <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-2 sm:p-3 border ${themeClasses.border}`}>
+                  <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-2 sm:p-3 border ${themeClasses.border} backdrop-blur-sm`}>
                     <div className="text-center">
                       <div className={`text-sm sm:text-lg font-bold ${themeClasses.text}`}>5%</div>
                       <div className={`text-xs ${themeClasses.textSecondary}`}>Markup</div>
                     </div>
                   </div>
-                  <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-2 sm:p-3 border ${themeClasses.border}`}>
+                  <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-2 sm:p-3 border ${themeClasses.border} backdrop-blur-sm`}>
                     <div className="text-center">
                       <div className={`text-sm sm:text-lg font-bold ${themeClasses.text}`}>Instant</div>
                       <div className={`text-xs ${themeClasses.textSecondary}`}>Settlement</div>
@@ -233,7 +510,6 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
               </div>
             </div>
 
-            {/* Loading state */}
             {loading && (
               <div className={`${themeClasses.cardBg} rounded-2xl sm:rounded-3xl border ${themeClasses.border} p-6 sm:p-8 lg:p-12 shadow-xl`}>
                 <div className="text-center">
@@ -254,7 +530,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
               </div>
             )}
 
-            {/* ===== NEW: zero funds banner ===== */}
+            {/* NEW: zero funds banner even when tokens[] exists but all balances are 0 */}
             {!loading && walletHasZeroFunds && (
               <div className={`${themeClasses.cardBg} rounded-2xl border ${themeClasses.border} p-6 shadow-xl mb-6 text-center`}>
                 <div className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
@@ -267,10 +543,9 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
               </div>
             )}
 
-            {/* Token list & trading only if there are tokens */}
             {!loading && tokens.length > 0 && (
               <div className="space-y-4 sm:space-y-6 lg:space-y-8">
-                {/* Asset Selection */}
+                {/* Asset Selection (UNCHANGED) */}
                 <div className={`${themeClasses.cardBg} rounded-2xl sm:rounded-3xl border ${themeClasses.border} p-4 sm:p-6 shadow-xl`}>
                   <div className="flex items-center mb-4 px-2">
                     <div className={`w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center mr-3 shadow-lg`}>
@@ -281,7 +556,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                       <p className={`text-xs sm:text-sm ${themeClasses.textSecondary}`}>{t('asset.chooseAsset')}</p>
                     </div>
                   </div>
-
+                  
                   <div className="relative px-2">
                     {!selectedToken ? (
                       <div className="space-y-3">
@@ -346,7 +621,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                           </div>
                         </div>
 
-                        {/* Token Grid */}
+                        {/* Enhanced Token Grid (UNCHANGED) */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           {tokens.map((token) => (
                             <button
@@ -359,8 +634,8 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                               }}
                               className={`group relative overflow-hidden ${themeClasses.cardBg} rounded-3xl p-6 transition-all duration-300 text-left border-2 ${
                                 selectedToken?.contractAddress === token.contractAddress 
-                                  ? `border-blue-600 ${darkMode ? 'bg-blue-900/30' : 'bg-blue-50'} shadow-2xl scale-105 ring-4 ring-blue-300/30` 
-                                  : `${themeClasses.border} hover:border-blue-400 hover:shadow-xl`
+                                  ? `border-blue-600 ${darkMode ? 'bg-blue-900/30' : 'bg-blue-50'} shadow-2xl scale-105 ring-4 ring-blue-300 ring-opacity-30` 
+                                  : `${themeClasses.border} hover:border-blue-400 hover:shadow-xl hover:scale-102`
                               }`}
                             >
                               {selectedToken?.contractAddress === token.contractAddress && (
@@ -372,7 +647,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                               )}
                               <div className="relative z-10">
                                 <div className="flex items-center space-x-3">
-                                  <div className={`w-16 h-16 bg-gradient-to-r ${themeClasses.gradient} rounded-3xl flex items-center justify-center text-white font-bold text-xl shadow-2xl group-hover:scale-110 transition-transform`}>
+                                  <div className={`w-16 h-16 bg-gradient-to-r ${themeClasses.gradient} rounded-3xl flex items-center justify-center text-white font-bold text-xl shadow-2xl group-hover:scale-110 transition-transform duration-300`}>
                                     {token.symbol?.charAt(0)}
                                   </div>
                                   <div className="flex-1">
@@ -413,7 +688,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                                       selectedToken?.contractAddress === token.contractAddress 
                                         ? 'text-blue-600' 
                                         : themeClasses.textSecondary
-                                    } group-hover:translate-x-1 transition-transform`} />
+                                    } group-hover:translate-x-1 transition-transform duration-300`} />
                                   </div>
                                 </div>
                               </div>
@@ -425,7 +700,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                   </div>
                 </div>
 
-                {/* Selected token + amount + quote */}
+                {/* Selected Token & Amount & Quote (UNCHANGED logic) */}
                 {selectedToken && (
                   <div className={`${themeClasses.cardBg} rounded-2xl sm:rounded-3xl border ${themeClasses.border} p-4 sm:p-6 shadow-xl`}>
                     {/* Selected Token Display */}
@@ -459,7 +734,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                           {t('asset.maxBalance')}: {selectedToken.balance} {selectedToken.symbol}
                         </div>
                       </div>
-
+                      
                       <div className="relative">
                         <input
                           type="number"
@@ -480,14 +755,14 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                           <span className={`text-sm sm:text-lg font-bold ${themeClasses.textSecondary}`}>{selectedToken.symbol}</span>
                         </div>
                       </div>
-
+                      
                       {(tradeAmount && Number(tradeAmount) > Number(selectedToken.balance)) && (
                         <div className={`mt-3 bg-red-50 ${darkMode ? 'bg-red-900/20' : ''} border border-red-200 ${darkMode ? 'border-red-700' : ''} rounded-xl p-3 flex items-center flex-wrap`}>
                           <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 mr-2 flex-shrink-0" />
                           <span className="text-red-600 font-medium text-sm sm:text-base">{t('asset.amountExceeds')}</span>
                         </div>
                       )}
-
+                      
                       {/* Quick Amount Buttons */}
                       <div className="grid grid-cols-4 gap-2 mt-4">
                         {['25%', '50%', '75%', '100%'].map((percentage) => (
@@ -508,7 +783,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                       </div>
                     </div>
 
-                    {/* Live Price Calculation */}
+                    {/* Enhanced Live Price Calculation (UNCHANGED behavior) */}
                     <div className={`bg-gradient-to-br ${darkMode ? 'from-blue-900/30 via-purple-900/20 to-green-900/20' : 'from-blue-50 via-purple-50 to-green-50'} border-2 ${darkMode ? 'border-blue-700' : 'border-blue-200'} rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-inner mx-2`}>
                       <div className="flex items-center mb-4 flex-wrap">
                         <div className={`w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl sm:rounded-2xl flex items-center justify-center mr-3 shadow-lg flex-shrink-0`}>
@@ -562,7 +837,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                                 <span className="text-orange-600 font-medium text-sm sm:text-base">{priceError}</span>
                               </div>
                               <p className={`text-xs sm:text-sm ${darkMode ? 'text-orange-400' : 'text-orange-700'}`}>
-                                You can still proceed — price will be calculated manually during processing.
+                                You can still proceed - price will be calculated manually during processing
                               </p>
                             </div>
                           );
@@ -570,6 +845,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
 
                         return (
                           <div className="space-y-4 sm:space-y-6">
+                            {/* Simple Quote Display */}
                             <div className="text-center">
                               <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-4 sm:p-6 border-2 border-green-400 shadow-lg mx-auto max-w-sm`}>
                                 <div className={`text-sm font-medium ${themeClasses.textSecondary} mb-2`}>{t('asset.youReceive')}</div>
@@ -580,6 +856,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                               </div>
                             </div>
 
+                            {/* Price Breakdown */}
                             <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-3 sm:p-4 border ${themeClasses.border} shadow-inner`}>
                               <h5 className={`font-semibold ${themeClasses.text} mb-3 flex items-center text-sm sm:text-base`}>
                                 <BarChart3 className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
@@ -604,11 +881,18 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                                   <span className="font-bold text-green-600">${total.toFixed(6)}</span>
                                 </div>
 
-                                {selectedToken?.value && balanceNum > 0 && Math.abs(walletUnitFallback - unitPriceUSD) / (walletUnitFallback || 1) > 0.1 && (
-                                  <div className="text-[11px] mt-2 text-amber-600">
-                                    Heads up: wallet valuation (${walletValueUSD.toFixed(2)}) uses a different price than live market. Showing live market.
-                                  </div>
-                                )}
+                                {/* Optional hint when wallet valuation vs live differs */}
+                                {(() => {
+                                  const balanceNum = Number(selectedToken?.balance ?? 0);
+                                  const walletValueUSD = Number(String(selectedToken?.value ?? '').replace(/[^0-9.\-]/g, '')) || 0;
+                                  const walletUnitFallback = balanceNum > 0 ? walletValueUSD / balanceNum : 0;
+                                  const unitPriceUSD = (tokenPrice ?? walletUnitFallback) || 0;
+                                  return (selectedToken?.value && balanceNum > 0 && Math.abs(walletUnitFallback - unitPriceUSD) / (walletUnitFallback || 1) > 0.1) ? (
+                                    <div className="text-[11px] mt-2 text-amber-600">
+                                      Heads up: wallet valuation (${walletValueUSD.toFixed(2)}) uses a different price than live market. Showing live market.
+                                    </div>
+                                  ) : null;
+                                })()}
                               </div>
                             </div>
                           </div>
@@ -621,10 +905,11 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                       <button
                         onClick={() => {
                           setCurrentStep(3);
+                          // Auto-scroll to payout section after a brief delay
                           setTimeout(() => {
                             const payoutSection = document.querySelector('[data-section="payout-selection"]');
                             if (payoutSection) {
-                              (payoutSection as HTMLElement).scrollIntoView({
+                              (payoutSection as HTMLElement).scrollIntoView({ 
                                 behavior: 'smooth',
                                 block: 'start',
                                 inline: 'nearest'
@@ -632,40 +917,5 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                             }
                           }, 100);
                         }}
-                        disabled={
-                          !selectedToken ||
-                          !tradeAmount ||
-                          parseFloat(tradeAmount) <= 0 ||
-                          Number(tradeAmount) > Number(selectedToken.balance)
-                        }
-                        className={`bg-gradient-to-r ${themeClasses.gradient} text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-semibold hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center mx-auto shadow-lg group text-sm sm:text-base`}
-                      >
-                        <span>{t('asset.nextPayout')}</span>
-                        <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Fallback for truly empty token list (still shown; zero-funds banner above also appears) */}
-            {!loading && tokens.length === 0 && (
-              <div className={`${themeClasses.cardBg} rounded-2xl sm:rounded-3xl border ${themeClasses.border} p-6 sm:p-8 lg:p-12 shadow-xl text-center`}>
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r ${themeClasses.gradient} rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl`}>
-                  <Database className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-                </div>
-                <h4 className={`text-xl sm:text-2xl font-bold ${themeClasses.text} mb-3 px-4`}>{t('asset.noAssets')}</h4>
-                <p className={`${themeClasses.textSecondary} mb-4 sm:mb-6 max-w-md mx-auto text-sm sm:text-base px-4`}>
-                  {t('asset.noAssetsDesc')}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default AssetManagement;
+                        disabled={!selectedToken || !tradeAmount || parseFloat(tradeAmount) <= 0 || Number(tradeAmount) > Number(selectedToken.balance)}
+                        className={`bg-gradient-to-r ${themeClasses.gradient} text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-semibold hover:shadow-xl disabled:opacity
