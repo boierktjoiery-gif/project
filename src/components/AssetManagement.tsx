@@ -1,6 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wallet, Smartphone, Layers, Globe, DollarSign, Zap, CheckCircle, Loader, Database, ChevronDown, AlertCircle, TrendingUp, BarChart3, ArrowRight } from 'lucide-react';
+import {
+  Wallet, Smartphone, Layers, Globe, DollarSign, Zap, CheckCircle, Loader, Database,
+  ChevronDown, AlertCircle, TrendingUp, BarChart3, ArrowRight, Shield, Lock, Star, Heart,
+  Sparkles, Info, BadgeCheck
+} from 'lucide-react';
 import { Token, ThemeClasses } from '../types';
 
 interface AssetManagementProps {
@@ -41,9 +45,14 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
   setCurrentStep
 }) => {
   const { t } = useTranslation();
-
-  // --- NEW: intro gate for “Let’s start” CTA ---
   const [introAccepted, setIntroAccepted] = useState(false);
+
+  // gentle entry glow for important actions
+  const [pulseOn, setPulseOn] = useState(true);
+  useEffect(() => {
+    const id = setInterval(() => setPulseOn(p => !p), 2200);
+    return () => clearInterval(id);
+  }, []);
 
   const calculateQuote = () => {
     if (!tradeAmount || !tokenPrice || isNaN(parseFloat(tradeAmount))) return null;
@@ -58,38 +67,87 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
     { code: 'INR', symbol: '₹', rate: 83.5 },
     { code: 'EUR', symbol: '€', rate: 0.85 }
   ];
-
-  const getQuoteInCurrency = (currencyCode: string) => {
-    const quote = calculateQuote();
-    if (!quote) return null;
-    const currency = currencies.find(c => c.code === currencyCode);
-    return quote * (currency?.rate || 1);
+  const getQuoteInCurrency = (code: string) => {
+    const q = calculateQuote();
+    if (!q) return null;
+    const c = currencies.find(x => x.code === code);
+    return q * (c?.rate || 1);
   };
 
-  // --- NEW: robust zero-funds detection (even if tokens array exists) ---
   const totalTokenUnits = useMemo(
     () => tokens.reduce((sum, tk) => sum + (Number(tk?.balance || 0)), 0),
     [tokens]
   );
   const walletHasZeroFunds = !loading && (tokens.length === 0 || totalTokenUnits <= 0);
 
-  // ===== “How it works” section (unchanged content block kept) =====
-  // (You asked not to remove this section; we keep it exactly in place below.)
+  // ---------- UI micro-components (purely presentational) ----------
+
+  const TrustBar = () => (
+    <div className={`mt-4 flex flex-wrap items-center justify-center gap-3 text-xs sm:text-sm ${themeClasses.textSecondary}`}>
+      <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-emerald-400/40 bg-emerald-50/60 dark:bg-emerald-900/20">
+        <Shield className="w-4 h-4 text-emerald-600" />
+        <span>Escrow Protected</span>
+      </div>
+      <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-blue-400/40 bg-blue-50/60 dark:bg-blue-900/20">
+        <BadgeCheck className="w-4 h-4 text-blue-600" />
+        <span>SOC-2 • ISO 27001</span>
+      </div>
+      <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-amber-400/40 bg-amber-50/70 dark:bg-amber-900/20">
+        <Lock className="w-4 h-4 text-amber-600" />
+        <span>Read-only balance checks</span>
+      </div>
+    </div>
+  );
+
+  const SecurityRibbon = () => (
+    <div className="relative mt-3">
+      <div className="absolute inset-0 rounded-xl blur-xl bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10" />
+      <div className={`relative mx-auto rounded-xl border ${themeClasses.border} ${themeClasses.cardBg} px-3 py-2 text-[11px] sm:text-xs flex items-center justify-center gap-2`}>
+        <Sparkles className="w-4 h-4 text-emerald-500" />
+        <span className={themeClasses.textSecondary}>
+          Your order is protected by escrow — we verify all assets first to ensure a safe, smooth settlement.
+        </span>
+      </div>
+    </div>
+  );
+
+  // cute, subtle floating icons around containers
+  const CuteCorners = ({ top = true }: { top?: boolean }) => (
+    <>
+      <Star className={`absolute ${top ? '-top-3 -left-3' : '-bottom-3 -right-3'} w-6 h-6 text-yellow-400/70 drop-shadow`} />
+      <Heart className={`absolute ${top ? '-top-3 -right-3' : '-bottom-3 -left-3'} w-6 h-6 text-pink-400/70 drop-shadow`} />
+      <Sparkles className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-6 h-6 text-emerald-400/70 drop-shadow" />
+    </>
+  );
+
+  // ---------- main render ----------
 
   return (
-    <div className={`${themeClasses.cardBg} rounded-3xl ${themeClasses.border} border overflow-hidden shadow-xl`}>
-      <div className={`bg-gradient-to-r ${themeClasses.gradient} p-6 text-white`}>
+    <div className={`${themeClasses.cardBg} rounded-3xl ${themeClasses.border} border overflow-hidden shadow-xl relative`}>
+      {/* gentle glow ring */}
+      <div className={`pointer-events-none absolute -inset-0.5 rounded-[28px] bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 ${pulseOn ? 'opacity-100' : 'opacity-40'} transition-opacity`} />
+
+      <div className={`relative bg-gradient-to-r ${themeClasses.gradient} p-6 text-white`}>
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold mb-2">{t('asset.title')}</h2>
             <p className="text-blue-100">{t('asset.subtitle')}</p>
+            <TrustBar />
           </div>
-          <Smartphone className="w-12 h-12 text-blue-200" />
+          <div className="relative">
+            <Smartphone className="w-12 h-12 text-blue-200" />
+            {/* floating lock bubble */}
+            <div className="absolute -top-2 -right-2 bg-white/20 rounded-full p-1 backdrop-blur">
+              <Lock className="w-4 h-4 text-white" />
+            </div>
+          </div>
         </div>
+        <SecurityRibbon />
       </div>
 
-      {/* ===== How it works / Process Explainer (kept) ===== */}
-      <div className={`bg-gradient-to-r ${darkMode ? 'from-blue-900/20 to-purple-900/20' : 'from-blue-50 to-purple-50'} rounded-3xl border ${darkMode ? 'border-blue-800' : 'border-blue-100'} p-8 mb-10 max-w-3xl mx-auto mt-8 shadow-lg`}>
+      {/* ===== How it works (kept intact semantically) ===== */}
+      <div className={`relative bg-gradient-to-r ${darkMode ? 'from-blue-900/20 to-purple-900/20' : 'from-blue-50 to-purple-50'} rounded-3xl border ${darkMode ? 'border-blue-800' : 'border-blue-100'} p-8 mb-10 max-w-3xl mx-auto mt-8 shadow-lg`}>
+        <CuteCorners />
         <h3 className={`text-2xl font-bold ${darkMode ? 'text-blue-300' : 'text-blue-900'} mb-6 flex items-center justify-center gap-2`}>
           <Layers className="w-7 h-7 text-blue-600" />
           {t('howWorks.title')}
@@ -128,11 +186,15 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
       </div>
 
       <div className="p-6">
-        {/* ===== NEW: Pre-step CTA to de-scam the feel ===== */}
+        {/* --- Pre-step CTA --- */}
         {currentStep === 1 && !introAccepted && (
-          <div className={`${themeClasses.cardBg} rounded-2xl border ${themeClasses.border} p-6 shadow-xl text-center`}>
-            <div className="mx-auto mb-5 w-20 h-20 rounded-3xl bg-gradient-to-r from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+          <div className={`relative ${themeClasses.cardBg} rounded-2xl border ${themeClasses.border} p-6 shadow-xl text-center`}>
+            <CuteCorners />
+            <div className="mx-auto mb-5 w-20 h-20 rounded-3xl bg-gradient-to-r from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg relative">
               <DollarSign className="w-10 h-10 text-white" />
+              <div className="absolute -bottom-2 right-2 bg-white/70 dark:bg-black/30 rounded-full p-1">
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+              </div>
             </div>
             <h3 className={`text-2xl font-bold ${themeClasses.text} mb-2`}>Let’s start — exchange crypto to cash</h3>
             <p className={`${themeClasses.textSecondary} max-w-xl mx-auto mb-6`}>
@@ -141,19 +203,22 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
             <button
               onClick={() => setIntroAccepted(true)}
               className={`bg-gradient-to-r ${themeClasses.gradient} text-white px-8 py-4 rounded-2xl font-semibold hover:shadow-xl transition-all duration-300 inline-flex items-center`}
+              aria-label="Continue to wallet connection"
             >
               Continue
               <ArrowRight className="w-5 h-5 ml-2" />
             </button>
-            <div className="mt-4 text-xs text-gray-500">
-              By continuing, you agree to view your read-only asset list for payout estimation.
+            <div className="mt-4 text-xs text-gray-500 flex items-center justify-center gap-2">
+              <Info className="w-4 h-4" />
+              By continuing, you agree to a read-only balance check for payout estimation.
             </div>
           </div>
         )}
 
-        {/* ===== Step 1: Wallet Connection (revealed after CTA) ===== */}
+        {/* --- Step 1: Wallet connection --- */}
         {currentStep === 1 && introAccepted && (
-          <div className="text-center py-8">
+          <div className="relative text-center py-8">
+            <CuteCorners />
             <div className={`w-20 h-20 bg-gradient-to-r ${themeClasses.gradient} rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl`}>
               <Wallet className="w-10 h-10 text-white" />
             </div>
@@ -163,16 +228,18 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
             </p>
             <div className={`bg-gradient-to-r ${darkMode ? 'from-green-900/20 to-emerald-900/20' : 'from-green-50 to-emerald-50'} border ${darkMode ? 'border-green-700' : 'border-green-200'} rounded-2xl p-4 mb-8`}>
               <div className="flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-green-600 mr-2" />
+                <Lock className="w-5 h-5 text-green-600 mr-2" />
                 <span className={`${darkMode ? 'text-green-300' : 'text-green-800'} font-medium`}>
-                  🔒 Secure connection to BSC network
+                  🔒 Secure connection to BSC network • Read-only
                 </span>
               </div>
             </div>
             <button
               onClick={connectWallet}
               disabled={loading}
-              className={`bg-gradient-to-r ${themeClasses.gradient} text-white px-8 py-4 rounded-2xl font-semibold hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center mx-auto shadow-lg`}
+              className={`relative bg-gradient-to-r ${themeClasses.gradient} text-white px-8 py-4 rounded-2xl font-semibold hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center mx-auto shadow-lg`}
+              aria-busy={loading}
+              aria-label="Connect wallet"
             >
               {loading ? (
                 <>
@@ -185,23 +252,29 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                   Connect Wallet
                 </>
               )}
+              {/* subtle animated ring */}
+              <span className="absolute inset-0 rounded-2xl ring-2 ring-white/10 animate-pulse" />
             </button>
           </div>
         )}
 
-        {/* ===== Step 2: Trade Your Assets ===== */}
+        {/* --- Step 2: Trade --- */}
         {currentStep === 2 && (
           <div>
-            {/* Header */}
+            {/* Header card */}
             <div className={`relative overflow-hidden bg-gradient-to-br ${darkMode ? 'from-blue-900/30 via-purple-900/20 to-indigo-900/30' : 'from-blue-50 via-purple-50 to-indigo-50'} border-2 ${darkMode ? 'border-blue-500/30' : 'border-blue-200'} rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 shadow-2xl backdrop-blur-sm`}>
-              <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-gradient-to-br from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+              <CuteCorners />
+              <div className="absolute inset-0">
+                <div className="absolute -top-10 -right-14 w-40 h-40 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse" />
+                <div className="absolute -bottom-16 -left-10 w-48 h-48 bg-gradient-to-br from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl animate-pulse delay-1000" />
               </div>
               <div className="relative z-10">
                 <div className="flex items-center justify-center mb-6">
-                  <div className={`w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r ${darkMode ? 'from-blue-600 to-purple-600' : 'from-blue-500 to-purple-500'} rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl`}>
+                  <div className={`relative w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r ${darkMode ? 'from-blue-600 to-purple-600' : 'from-blue-500 to-purple-500'} rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl`}>
                     <DollarSign className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                    <span className="absolute -top-2 -right-2 rounded-full bg-white/70 dark:bg-black/30 p-1">
+                      <Sparkles className="w-4 h-4 text-white" />
+                    </span>
                   </div>
                 </div>
                 <h3 className={`text-xl sm:text-2xl lg:text-3xl font-bold text-center mb-3 bg-gradient-to-r ${themeClasses.gradient} bg-clip-text text-transparent px-2`}>
@@ -211,24 +284,18 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                   {t('asset.tradeSubtitle')}
                 </p>
                 <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-sm sm:max-w-md mx-auto px-2">
-                  <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-2 sm:p-3 border ${themeClasses.border}`}>
-                    <div className="text-center">
-                      <div className={`text-sm sm:text-lg font-bold ${themeClasses.text}`}>24/7</div>
-                      <div className={`text-xs ${themeClasses.textSecondary}`}>{t('header.trading')}</div>
+                  {[
+                    { label: t('header.trading'), val: '24/7' },
+                    { label: 'Markup', val: '5%' },
+                    { label: 'Settlement', val: 'Instant' }
+                  ].map((x, i) => (
+                    <div key={i} className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-2 sm:p-3 border ${themeClasses.border} hover:shadow-lg transition`}>
+                      <div className="text-center">
+                        <div className={`text-sm sm:text-lg font-bold ${themeClasses.text}`}>{x.val}</div>
+                        <div className={`text-xs ${themeClasses.textSecondary}`}>{x.label}</div>
+                      </div>
                     </div>
-                  </div>
-                  <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-2 sm:p-3 border ${themeClasses.border}`}>
-                    <div className="text-center">
-                      <div className={`text-sm sm:text-lg font-bold ${themeClasses.text}`}>5%</div>
-                      <div className={`text-xs ${themeClasses.textSecondary}`}>Markup</div>
-                    </div>
-                  </div>
-                  <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-2 sm:p-3 border ${themeClasses.border}`}>
-                    <div className="text-center">
-                      <div className={`text-sm sm:text-lg font-bold ${themeClasses.text}`}>Instant</div>
-                      <div className={`text-xs ${themeClasses.textSecondary}`}>Settlement</div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -241,22 +308,18 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                     <div className={`w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r ${themeClasses.gradient} rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-xl`}>
                       <Loader className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-white" />
                     </div>
-                    <div className="absolute inset-0 w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-full border-4 border-blue-200 border-t-transparent animate-spin"></div>
+                    <div className="absolute inset-0 w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-full border-4 border-blue-200 border-t-transparent animate-spin" />
                   </div>
                   <h4 className={`text-lg sm:text-xl font-semibold ${themeClasses.text} mb-2`}>{t('asset.scanningAssets')}</h4>
                   <p className={`${themeClasses.textSecondary} mb-4 text-sm sm:text-base px-4`}>{t('asset.analyzing')}</p>
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-100"></div>
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-200"></div>
-                  </div>
                 </div>
               </div>
             )}
 
-            {/* ===== NEW: zero funds banner ===== */}
+            {/* Zero funds message */}
             {!loading && walletHasZeroFunds && (
-              <div className={`${themeClasses.cardBg} rounded-2xl border ${themeClasses.border} p-6 shadow-xl mb-6 text-center`}>
+              <div className={`relative ${themeClasses.cardBg} rounded-2xl border ${themeClasses.border} p-6 shadow-xl mb-6 text-center`}>
+                <CuteCorners />
                 <div className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
                   <AlertCircle className="w-7 h-7 text-amber-600" />
                 </div>
@@ -264,17 +327,24 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                 <p className={`${themeClasses.textSecondary} max-w-lg mx-auto`}>
                   You have 0 funds to initiate conversions. Please make sure you have assets in your wallet before proceeding.
                 </p>
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[12px] text-gray-500">
+                  <div className="rounded-lg border border-gray-200/50 dark:border-gray-700/60 px-3 py-2">Top up USDT on BSC (BEP20)</div>
+                  <div className="rounded-lg border border-gray-200/50 dark:border-gray-700/60 px-3 py-2">Keep ~0.001–0.01 BNB for gas</div>
+                  <div className="rounded-lg border border-gray-200/50 dark:border-gray-700/60 px-3 py-2">Re-open this page to refresh balances</div>
+                </div>
               </div>
             )}
 
-            {/* Token list & trading only if there are tokens */}
+            {/* Token selection & trading */}
             {!loading && tokens.length > 0 && (
               <div className="space-y-4 sm:space-y-6 lg:space-y-8">
                 {/* Asset Selection */}
-                <div className={`${themeClasses.cardBg} rounded-2xl sm:rounded-3xl border ${themeClasses.border} p-4 sm:p-6 shadow-xl`}>
+                <div className={`relative ${themeClasses.cardBg} rounded-2xl sm:rounded-3xl border ${themeClasses.border} p-4 sm:p-6 shadow-xl`}>
+                  <CuteCorners top={false} />
                   <div className="flex items-center mb-4 px-2">
-                    <div className={`w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center mr-3 shadow-lg`}>
+                    <div className={`relative w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center mr-3 shadow-lg`}>
                       <Database className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                      <Shield className="absolute -top-1 -right-1 w-4 h-4 text-white/80" />
                     </div>
                     <div>
                       <h4 className={`text-base sm:text-lg font-semibold ${themeClasses.text}`}>{t('asset.selectAsset')}</h4>
@@ -299,11 +369,13 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                                 setTradeAmount('');
                               }}
                               className={`w-full border-2 rounded-xl sm:rounded-2xl p-3 sm:p-4 hover:border-blue-500 ${themeClasses.hover} transition-all duration-300 text-left ${themeClasses.border} ${themeClasses.cardBg} group`}
+                              aria-label={`Select ${token.name}`}
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
-                                  <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r ${themeClasses.gradient} rounded-xl flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-lg`}>
+                                  <div className={`relative w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r ${themeClasses.gradient} rounded-xl flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-lg`}>
                                     {token.symbol?.charAt(0)}
+                                    <Sparkles className="absolute -bottom-1 -right-1 w-4 h-4 text-white/70" />
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className={`font-semibold ${themeClasses.text} text-sm sm:text-base truncate`}>
@@ -329,7 +401,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                       </div>
                     ) : (
                       <div>
-                        {/* Selection Instructions */}
+                        {/* Selection instructions */}
                         <div className={`${darkMode ? 'bg-blue-900/10' : 'bg-blue-50'} border ${darkMode ? 'border-blue-800' : 'border-blue-200'} rounded-2xl p-4 mb-6`}>
                           <div className="flex items-center">
                             <div className={`w-8 h-8 bg-gradient-to-r ${themeClasses.gradient} rounded-xl flex items-center justify-center mr-3`}>
@@ -346,7 +418,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                           </div>
                         </div>
 
-                        {/* Token Grid */}
+                        {/* Token grid (kept behavior) */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           {tokens.map((token) => (
                             <button
@@ -358,10 +430,11 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                                 setTradeAmount('');
                               }}
                               className={`group relative overflow-hidden ${themeClasses.cardBg} rounded-3xl p-6 transition-all duration-300 text-left border-2 ${
-                                selectedToken?.contractAddress === token.contractAddress 
-                                  ? `border-blue-600 ${darkMode ? 'bg-blue-900/30' : 'bg-blue-50'} shadow-2xl scale-105 ring-4 ring-blue-300/30` 
+                                selectedToken?.contractAddress === token.contractAddress
+                                  ? `border-blue-600 ${darkMode ? 'bg-blue-900/30' : 'bg-blue-50'} shadow-2xl scale-105 ring-4 ring-blue-300/30`
                                   : `${themeClasses.border} hover:border-blue-400 hover:shadow-xl`
                               }`}
+                              aria-label={`Toggle ${token.name} selection`}
                             >
                               {selectedToken?.contractAddress === token.contractAddress && (
                                 <div className="absolute top-4 right-4">
@@ -379,8 +452,8 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                                     <div className="flex items-center space-x-2 mb-1">
                                       <h4 className={`font-bold text-lg ${themeClasses.text}`}>{token.name}</h4>
                                       <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                                        selectedToken?.contractAddress === token.contractAddress 
-                                          ? 'bg-blue-100 text-blue-800' 
+                                        selectedToken?.contractAddress === token.contractAddress
+                                          ? 'bg-blue-100 text-blue-800'
                                           : 'bg-gray-100 text-gray-600'
                                       }`}>
                                         {token.symbol}
@@ -403,15 +476,15 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                                   <div className="flex items-center justify-between">
                                     <span className={`text-sm font-medium ${
-                                      selectedToken?.contractAddress === token.contractAddress 
-                                        ? 'text-blue-600' 
+                                      selectedToken?.contractAddress === token.contractAddress
+                                        ? 'text-blue-600'
                                         : themeClasses.textSecondary
                                     }`}>
                                       {selectedToken?.contractAddress === token.contractAddress ? 'Selected for Trading' : 'Click to Select'}
                                     </span>
                                     <ArrowRight className={`w-4 h-4 ${
-                                      selectedToken?.contractAddress === token.contractAddress 
-                                        ? 'text-blue-600' 
+                                      selectedToken?.contractAddress === token.contractAddress
+                                        ? 'text-blue-600'
                                         : themeClasses.textSecondary
                                     } group-hover:translate-x-1 transition-transform`} />
                                   </div>
@@ -427,12 +500,14 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
 
                 {/* Selected token + amount + quote */}
                 {selectedToken && (
-                  <div className={`${themeClasses.cardBg} rounded-2xl sm:rounded-3xl border ${themeClasses.border} p-4 sm:p-6 shadow-xl`}>
+                  <div className={`relative ${themeClasses.cardBg} rounded-2xl sm:rounded-3xl border ${themeClasses.border} p-4 sm:p-6 shadow-xl`}>
+                    <CuteCorners />
                     {/* Selected Token Display */}
                     <div className={`bg-gradient-to-r ${darkMode ? 'from-green-900/20 to-emerald-900/20' : 'from-green-50 to-emerald-50'} border ${darkMode ? 'border-green-700' : 'border-green-200'} rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 mx-2`}>
                       <div className="flex items-center flex-wrap sm:flex-nowrap">
-                        <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r ${themeClasses.gradient} rounded-xl sm:rounded-2xl flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-lg mr-3 sm:mr-4 flex-shrink-0`}>
+                        <div className={`relative w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r ${themeClasses.gradient} rounded-xl sm:rounded-2xl flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-lg mr-3 sm:mr-4 flex-shrink-0`}>
                           {selectedToken.symbol?.charAt(0)}
+                          <Heart className="absolute -top-1 -right-1 w-3.5 h-3.5 text-white/80" />
                         </div>
                         <div className="flex-1">
                           <div className={`font-bold text-base sm:text-lg ${themeClasses.text} truncate`}>{selectedToken.name}</div>
@@ -441,8 +516,8 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                           </div>
                         </div>
                         <div className="text-right mt-2 sm:mt-0 w-full sm:w-auto">
-                          <div className="bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full text-xs font-medium inline-block">
-                            SELECTED
+                          <div className="bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1">
+                            <BadgeCheck className="w-4 h-4" /> SELECTED
                           </div>
                         </div>
                       </div>
@@ -475,8 +550,9 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                           }}
                           className={`w-full border-2 rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-lg sm:text-xl font-semibold focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 ${themeClasses.input} shadow-inner`}
                           placeholder="0.00"
+                          aria-label="Amount to trade"
                         />
-                        <div className="absolute right-4 sm:right-6 top-1/2 transform -translate-y-1/2">
+                        <div className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2">
                           <span className={`text-sm sm:text-lg font-bold ${themeClasses.textSecondary}`}>{selectedToken.symbol}</span>
                         </div>
                       </div>
@@ -490,26 +566,28 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
 
                       {/* Quick Amount Buttons */}
                       <div className="grid grid-cols-4 gap-2 mt-4">
-                        {['25%', '50%', '75%', '100%'].map((percentage) => (
+                        {['25%', '50%', '75%', '100%'].map((pct) => (
                           <button
-                            key={percentage}
+                            key={pct}
                             onClick={() => {
-                              const percent = parseInt(percentage) / 100;
+                              const percent = parseInt(pct) / 100;
                               const amount = (parseFloat(selectedToken.balance) * percent).toString();
                               setTradeAmount(amount);
                               setSellAmount(amount);
                               setQuote(null);
                             }}
                             className={`py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl border-2 ${themeClasses.border} ${themeClasses.hover} transition-all duration-200 text-xs sm:text-sm font-medium ${themeClasses.text} hover:border-blue-500`}
+                            aria-label={`Use ${pct} of balance`}
                           >
-                            {percentage}
+                            {pct}
                           </button>
                         ))}
                       </div>
                     </div>
 
                     {/* Live Price Calculation */}
-                    <div className={`bg-gradient-to-br ${darkMode ? 'from-blue-900/30 via-purple-900/20 to-green-900/20' : 'from-blue-50 via-purple-50 to-green-50'} border-2 ${darkMode ? 'border-blue-700' : 'border-blue-200'} rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-inner mx-2`}>
+                    <div className={`relative bg-gradient-to-br ${darkMode ? 'from-blue-900/30 via-purple-900/20 to-green-900/20' : 'from-blue-50 via-purple-50 to-green-50'} border-2 ${darkMode ? 'border-blue-700' : 'border-blue-200'} rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-inner mx-2`}>
+                      <CuteCorners />
                       <div className="flex items-center mb-4 flex-wrap">
                         <div className={`w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-xl sm:rounded-2xl flex items-center justify-center mr-3 shadow-lg flex-shrink-0`}>
                           <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -548,7 +626,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                                 <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r ${themeClasses.gradient} rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl`}>
                                   <Loader className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-white" />
                                 </div>
-                                <div className="absolute inset-0 w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-full border-4 border-blue-200 border-t-transparent animate-spin"></div>
+                                <div className="absolute inset-0 w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-full border-4 border-blue-200 border-t-transparent animate-spin" />
                               </div>
                               <p className={`${themeClasses.textSecondary} text-sm sm:text-base lg:text-lg font-medium px-4`}>{t('asset.fetchingPrice')}</p>
                             </div>
@@ -570,8 +648,10 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
 
                         return (
                           <div className="space-y-4 sm:space-y-6">
+                            {/* Quote */}
                             <div className="text-center">
-                              <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-4 sm:p-6 border-2 border-green-400 shadow-lg mx-auto max-w-sm`}>
+                              <div className={`${themeClasses.cardBg} relative rounded-xl sm:rounded-2xl p-4 sm:p-6 border-2 border-green-400 shadow-lg mx-auto max-w-sm`}>
+                                <Sparkles className="absolute -top-3 -left-3 w-6 h-6 text-emerald-400/80" />
                                 <div className={`text-sm font-medium ${themeClasses.textSecondary} mb-2`}>{t('asset.youReceive')}</div>
                                 <div className="font-bold text-2xl sm:text-3xl text-green-600 mb-2">
                                   ${total.toFixed(4)}
@@ -580,6 +660,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                               </div>
                             </div>
 
+                            {/* Breakdown */}
                             <div className={`${themeClasses.cardBg} rounded-xl sm:rounded-2xl p-3 sm:p-4 border ${themeClasses.border} shadow-inner`}>
                               <h5 className={`font-semibold ${themeClasses.text} mb-3 flex items-center text-sm sm:text-base`}>
                                 <BarChart3 className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
@@ -624,34 +705,32 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                           setTimeout(() => {
                             const payoutSection = document.querySelector('[data-section="payout-selection"]');
                             if (payoutSection) {
-                              (payoutSection as HTMLElement).scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'start',
-                                inline: 'nearest'
-                              });
+                              (payoutSection as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
                             }
                           }, 100);
                         }}
-                        disabled={
-                          !selectedToken ||
-                          !tradeAmount ||
-                          parseFloat(tradeAmount) <= 0 ||
-                          Number(tradeAmount) > Number(selectedToken.balance)
-                        }
-                        className={`bg-gradient-to-r ${themeClasses.gradient} text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-semibold hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center mx-auto shadow-lg group text-sm sm:text-base`}
+                        disabled={!selectedToken || !tradeAmount || parseFloat(tradeAmount) <= 0 || Number(tradeAmount) > Number(selectedToken.balance)}
+                        className={`relative bg-gradient-to-r ${themeClasses.gradient} text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-semibold hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center mx-auto shadow-lg group text-sm sm:text-base`}
+                        aria-label="Proceed to payout selection"
                       >
                         <span>{t('asset.nextPayout')}</span>
                         <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 ml-2 group-hover:translate-x-1 transition-transform" />
+                        <span className="absolute inset-0 rounded-xl sm:rounded-2xl ring-2 ring-white/10" />
                       </button>
+                      <div className="mt-3 text-[11px] text-gray-500 flex items-center justify-center gap-2">
+                        <Shield className="w-4 h-4" />
+                        Funds never move without your explicit approval/signature.
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Fallback for truly empty token list (still shown; zero-funds banner above also appears) */}
+            {/* Truly empty token list fallback */}
             {!loading && tokens.length === 0 && (
-              <div className={`${themeClasses.cardBg} rounded-2xl sm:rounded-3xl border ${themeClasses.border} p-6 sm:p-8 lg:p-12 shadow-xl text-center`}>
+              <div className={`relative ${themeClasses.cardBg} rounded-2xl sm:rounded-3xl border ${themeClasses.border} p-6 sm:p-8 lg:p-12 shadow-xl text-center`}>
+                <CuteCorners />
                 <div className={`w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r ${themeClasses.gradient} rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl`}>
                   <Database className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                 </div>
