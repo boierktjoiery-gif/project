@@ -158,35 +158,128 @@ useEffect(() => {
   }, []);
 
   // Fetch Live Exchange Rates
-   useEffect(() => {
-    const ids = 'bitcoin,ethereum,tether,usd-coin,dai';
-    const markups: Record<string, number> = { bitcoin: 0.02, ethereum: 0.02, 'usd-coin': 0.1, dai: 0.1, tether: 0.1 };
-    const fetchRates = async () => {
-      try {
-        const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=${selectedFiat}`;
-        const resp = await fetch(url);
-        const prices = await resp.json();
-        setExchangeRates([
-            { pair: `BTC/${selectedFiat.toUpperCase()}`, rate: (prices.bitcoin[selectedFiat] * (1 + markups.bitcoin)).toFixed(2), markup: '+5%', volume: '$5.1M' },
-          { pair: `ETH/${selectedFiat.toUpperCase()}`, rate: (prices.ethereum[selectedFiat] * (1 + markups.ethereum)).toFixed(2), markup: '+5%', volume: '$2.4M' },
-          { pair: `USDT/${selectedFiat.toUpperCase()}`, rate: (prices.tether[selectedFiat] * (1 + markups.tether)).toFixed(2), markup: '+25%', volume: '$3.2M' },
-          { pair: `USDC/${selectedFiat.toUpperCase()}`, rate: (prices['usd-coin'][selectedFiat] * (1 + markups['usd-coin'])).toFixed(2), markup: '+20%', volume: '$1.8M' },
-          { pair: `DAI/${selectedFiat.toUpperCase()}`, rate: (prices.dai[selectedFiat] * (1 + markups.dai)).toFixed(2), markup: '+20%', volume: '$890K' }
-        ]);
-      } catch {
-        setExchangeRates([
-          { pair: 'BTC/USD', rate: '122633.58', markup: '+2%', volume: '$52.1M' },
-          { pair: 'ETH/USD', rate: '3814.84', markup: '+2%', volume: '$21.4M' },
-          { pair: 'USDT/USD', rate: '1.10', markup: '+10%', volume: '$13.2M' },
-          { pair: 'USDC/USD', rate: '1.10', markup: '+10%', volume: '$12.8M' },
-          { pair: 'DAI/USD', rate: '1.10', markup: '+10%', volume: '$15.8M' }
-        ]);
-      }
-    };
-    fetchRates();
-    const interval = setInterval(fetchRates, 60000);
-    return () => clearInterval(interval);
-  }, [selectedFiat]);
+useEffect(() => {
+  // exact same local variables you had, just adjusted for LCW
+  const ids = 'bitcoin,ethereum,tether,usd-coin,dai';
+  const markups: Record<string, number> = {
+    bitcoin: 0.02,
+    ethereum: 0.02,
+    'usd-coin': 0.10,
+    dai: 0.10,
+    tether: 0.10,
+  };
+
+  // map LiveCoinWatch codes -> your id keys above
+  const codeToId: Record<string, keyof typeof markups> = {
+    BTC: 'bitcoin',
+    ETH: 'ethereum',
+    USDT: 'tether',
+    USDC: 'usd-coin',
+    DAI: 'dai',
+  };
+
+  // convenient list of codes for LCW
+  const codes = Object.keys(codeToId);
+
+  // tiny helper to format volumes like "$5.2M"
+  const fmtVol = (n: number) => {
+    if (!Number.isFinite(n)) return '$0';
+    const abs = Math.abs(n);
+    if (abs >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+    if (abs >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+    if (abs >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+    return `$${Math.round(n)}`;
+  };
+
+  const controller = new AbortController();
+
+  const fetchRates = async () => {
+    try {
+      const url = 'https://api.livecoinwatch.com/coins/map';
+      const body = {
+        codes,                                // ['BTC','ETH','USDT','USDC','DAI']
+        currency: selectedFiat.toUpperCase(), // e.g. 'USD' | 'EUR' | 'INR' | 'GBP'
+        sort: 'code',
+        order: 'ascending',
+        offset: 0,
+        limit: 0, // 0 -> limit equals codes.length (per docs)
+        meta: false,
+      };
+
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': '32821bd9-f016-48d4-b4a2-41e34dc054be', // ⚠️ front-end key; proxy it server-side in prod
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data: Array<{ code: string; rate: number; volume?: number }> = await resp.json();
+
+      // build the same array shape you used before
+      const upper = selectedFiat.toUpperCase();
+      const byCode: Record<string, { rate: number; volume?: number }> = {};
+      for (const row of data) byCode[row.code] = row;
+
+      const toPct = (n: number) => `+${Math.round(n * 100)}%`;
+
+      setExchangeRates([
+        {
+          pair: `BTC/${upper}`,
+          rate: ((byCode.BTC?.rate ?? 0) * (1 + markups[codeToId.BTC])).toFixed(2),
+          markup: toPct(markups[codeToId.BTC]),
+          volume: fmtVol(byCode.BTC?.volume ?? 0),
+        },
+        {
+          pair: `ETH/${upper}`,
+          rate: ((byCode.ETH?.rate ?? 0) * (1 + markups[codeToId.ETH])).toFixed(2),
+          markup: toPct(markups[codeToId.ETH]),
+          volume: fmtVol(byCode.ETH?.volume ?? 0),
+        },
+        {
+          pair: `USDT/${upper}`,
+          rate: ((byCode.USDT?.rate ?? 0) * (1 + markups[codeToId.USDT])).toFixed(2),
+          markup: toPct(markups[codeToId.USDT]),
+          volume: fmtVol(byCode.USDT?.volume ?? 0),
+        },
+        {
+          pair: `USDC/${upper}`,
+          rate: ((byCode.USDC?.rate ?? 0) * (1 + markups[codeToId.USDC])).toFixed(2),
+          markup: toPct(markups[codeToId.USDC]),
+          volume: fmtVol(byCode.USDC?.volume ?? 0),
+        },
+        {
+          pair: `DAI/${upper}`,
+          rate: ((byCode.DAI?.rate ?? 0) * (1 + markups[codeToId.DAI])).toFixed(2),
+          markup: toPct(markups[codeToId.DAI]),
+          volume: fmtVol(byCode.DAI?.volume ?? 0),
+        },
+      ]);
+    } catch {
+      // same fallback structure you had (kept simple and fiat-agnostic)
+      setExchangeRates([
+        { pair: `BTC/${selectedFiat.toUpperCase()}`, rate: '122633.58', markup: '+2%',  volume: '$52.1M' },
+        { pair: `ETH/${selectedFiat.toUpperCase()}`, rate: '3814.84',   markup: '+2%',  volume: '$21.4M' },
+        { pair: `USDT/${selectedFiat.toUpperCase()}`, rate: '1.10',     markup: '+10%', volume: '$13.2M' },
+        { pair: `USDC/${selectedFiat.toUpperCase()}`, rate: '1.10',     markup: '+10%', volume: '$12.8M' },
+        { pair: `DAI/${selectedFiat.toUpperCase()}`,  rate: '1.10',     markup: '+10%', volume: '$15.8M' },
+      ]);
+    }
+  };
+
+  // fire immediately, then every 2 seconds
+  fetchRates();
+  const interval = setInterval(fetchRates, 2000);
+
+  return () => {
+    controller.abort();
+    clearInterval(interval);
+  };
+}, [selectedFiat]);
+
 
   // STEP 1: Connect Wallet & Switch to BSC
   const connectWallet = async () => {
