@@ -1,8 +1,23 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Wallet, Smartphone, Layers, Globe, DollarSign, Zap, CheckCircle, Loader, Database,
-  ChevronDown, AlertCircle, TrendingUp, BarChart3, ArrowRight, Shield, Lock, Info, BadgeCheck
+  Wallet,
+  Smartphone,
+  Layers,
+  Globe,
+  DollarSign,
+  Zap,
+  CheckCircle,
+  Loader,
+  Database,
+  AlertCircle,
+  TrendingUp,
+  BarChart3,
+  ArrowRight,
+  Shield,
+  Lock,
+  Info,
+  BadgeCheck
 } from 'lucide-react';
 import { Token, ThemeClasses } from '../types';
 
@@ -13,7 +28,7 @@ interface AssetManagementProps {
   selectedToken: Token | null;
   tradeAmount: string;
   tokenPrice: number | null;
-  priceLoading: boolean;
+  priceLoading: boolean | null;
   priceError: string | null;
   darkMode: boolean;
   themeClasses: ThemeClasses;
@@ -46,10 +61,10 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
   const { t } = useTranslation();
   const [introAccepted, setIntroAccepted] = useState(false);
 
-  // subtle attention pulse
+  // subtle attention pulse around container
   const [pulseOn, setPulseOn] = useState(true);
   useEffect(() => {
-    const id = setInterval(() => setPulseOn((p) => !p), 2200);
+    const id = setInterval(() => setPulseOn(p => !p), 2200);
     return () => clearInterval(id);
   }, []);
 
@@ -69,38 +84,26 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
   const getQuoteInCurrency = (code: string) => {
     const q = calculateQuote();
     if (!q) return null;
-    const c = currencies.find((x) => x.code === code);
+    const c = currencies.find(x => x.code === code);
     return q * (c?.rate || 1);
   };
 
   const totalTokenUnits = useMemo(
-    () => tokens.reduce((sum, tk) => sum + Number(tk?.balance || 0), 0),
+    () => tokens.reduce((sum, tk) => sum + (Number(tk?.balance || 0)), 0),
     [tokens]
   );
   const walletHasZeroFunds = !loading && (tokens.length === 0 || totalTokenUnits <= 0);
 
-  // ===== Professional Trust Bar (text-only, no cute icons) =====
+  // ===== Trust badges (high contrast, no icons) =====
   const TrustBar = () => (
     <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-      <span
-        className={`px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold whitespace-nowrap ${
-          darkMode ? 'bg-emerald-600 text-white' : 'bg-emerald-600 text-white'
-        }`}
-      >
+      <span className="px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold whitespace-nowrap bg-emerald-600 text-white">
         Escrow Protected
       </span>
-      <span
-        className={`px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold whitespace-nowrap ${
-          darkMode ? 'bg-blue-700 text-white' : 'bg-blue-700 text-white'
-        }`}
-      >
+      <span className="px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold whitespace-nowrap bg-blue-700 text-white">
         SOC-2 • ISO 27001
       </span>
-      <span
-        className={`px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold whitespace-nowrap ${
-          darkMode ? 'bg-neutral-800 text-white' : 'bg-neutral-900 text-white'
-        }`}
-      >
+      <span className="px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold whitespace-nowrap bg-neutral-900 text-white dark:bg-neutral-800">
         Read-only balance checks
       </span>
     </div>
@@ -144,15 +147,19 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
         <SecurityRibbon />
       </div>
 
-      {/* ===== Mobile compact: one card, collapsible "How it works" ===== */}
+      {/* ===== Mobile compact: one interactive card with clear header ===== */}
       <div className="sm:hidden p-4">
-        <div className={`rounded-2xl border ${themeClasses.border} ${themeClasses.cardBg} p-4`}>
+        <div className={`rounded-2xl border ${themeClasses.border} ${themeClasses.cardBg} p-4 shadow-md`}>
           {!introAccepted ? (
             <>
-              <h3 className={`text-lg font-bold ${themeClasses.text} mb-2`}>Let’s start — exchange crypto to cash</h3>
-              <p className={`${themeClasses.textSecondary} text-sm mb-4`}>
-                Connect your wallet securely on BSC. We’ll only read balances to show available assets and payout quotes.
-              </p>
+              {/* Card header for session start */}
+              <div className="mb-3 border-b border-gray-200 dark:border-gray-700 pb-2">
+                <h3 className={`text-lg font-bold ${themeClasses.text}`}>Start Conversion Session</h3>
+                <p className={`${themeClasses.textSecondary} text-sm`}>
+                  Begin by connecting your wallet. We’ll only read balances to estimate payout options.
+                </p>
+              </div>
+
               <button
                 onClick={() => setIntroAccepted(true)}
                 className={`w-full bg-gradient-to-r ${themeClasses.gradient} text-white py-3 rounded-xl font-semibold flex items-center justify-center`}
@@ -160,11 +167,12 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                 Continue <ArrowRight className="w-5 h-5 ml-2" />
               </button>
 
+              {/* How it Works (collapsible and themed correctly in dark mode) */}
               <details className="mt-4">
-                <summary className="text-sm font-medium cursor-pointer flex items-center">
+                <summary className={`text-sm font-medium cursor-pointer flex items-center ${themeClasses.text}`}>
                   <Layers className="w-4 h-4 mr-1" /> {t('howWorks.title')}
                 </summary>
-                <ol className="mt-2 space-y-1 text-[13px] leading-5">
+                <ol className={`mt-2 space-y-1 text-[13px] leading-5 ${themeClasses.textSecondary}`}>
                   <li>1. {t('howWorks.choosePayment')}</li>
                   <li>2. {t('howWorks.placeOrder')}</li>
                   <li>3. {t('howWorks.processPayment')}</li>
@@ -176,14 +184,19 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
             </>
           ) : (
             <>
-              <h3 className={`text-base font-semibold ${themeClasses.text} mb-2`}>Connect Wallet (BSC)</h3>
+              {/* Wallet connect header */}
+              <div className="mb-3 border-b border-gray-200 dark:border-gray-700 pb-2">
+                <h3 className={`text-base font-semibold ${themeClasses.text}`}>Connect Wallet (BSC)</h3>
+                <p className={`${themeClasses.textSecondary} text-xs`}>Secure, read-only connection to fetch balances.</p>
+              </div>
+
               <div
                 className={`mb-3 rounded-lg px-3 py-2 text-[12px] ${
                   darkMode ? 'bg-green-900/20 text-green-300 border border-green-700' : 'bg-green-50 text-green-800 border border-green-200'
                 }`}
               >
                 <span className="inline-flex items-center">
-                  <Lock className="w-4 h-4 mr-2" /> Secure, read-only connection
+                  <Lock className="w-4 h-4 mr-2" /> Secure connection active
                 </span>
               </div>
               <button
@@ -218,9 +231,9 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
         )}
       </div>
 
-      {/* ===== Desktop / tablet flow ===== */}
+      {/* ===== Desktop / tablet ===== */}
       <div className="hidden sm:block p-6">
-        {/* Pre-step CTA */}
+        {/* --- Pre-step CTA --- */}
         {currentStep === 1 && !introAccepted && (
           <div className={`relative ${themeClasses.cardBg} rounded-2xl border ${themeClasses.border} p-6 shadow-xl`}>
             <h3 className={`text-2xl font-bold ${themeClasses.text} mb-2`}>Let’s start — exchange crypto to cash</h3>
@@ -240,7 +253,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
           </div>
         )}
 
-        {/* Step 1: Wallet connection */}
+        {/* --- Step 1: Wallet connection --- */}
         {currentStep === 1 && introAccepted && (
           <div className="text-center py-8">
             <div className={`${darkMode ? 'bg-neutral-800' : 'bg-neutral-100'} w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6`}>
@@ -278,7 +291,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
           </div>
         )}
 
-        {/* How it Works (desktop) */}
+        {/* ===== How it Works (desktop) ===== */}
         <div
           className={`mt-8 bg-gradient-to-r ${darkMode ? 'from-blue-900/20 to-purple-900/20' : 'from-blue-50 to-purple-50'} rounded-3xl border ${
             darkMode ? 'border-blue-800' : 'border-blue-100'
@@ -315,10 +328,10 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
           </div>
         </div>
 
-        {/* Step 2 */}
+        {/* ===== Step 2: Trade ===== */}
         {currentStep === 2 && (
           <div className="mt-6">
-            {/* Loading */}
+            {/* Loading state */}
             {loading && (
               <div className={`${themeClasses.cardBg} rounded-2xl border ${themeClasses.border} p-8 shadow-xl text-center`}>
                 <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -361,7 +374,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                           <span className={themeClasses.textSecondary}>{t('asset.chooseAsset')}</span>
                         </div>
                         <div className="max-h-64 overflow-y-auto space-y-2">
-                          {tokens.map((token) => (
+                          {tokens.map(token => (
                             <button
                               key={token.contractAddress}
                               onClick={() => {
@@ -436,7 +449,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                           max={selectedToken.balance}
                           step="any"
                           value={tradeAmount}
-                          onChange={(e) => {
+                          onChange={e => {
                             const val = e.target.value;
                             setTradeAmount(val);
                             setSellAmount(val);
@@ -449,11 +462,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                       </div>
 
                       {tradeAmount && Number(tradeAmount) > Number(selectedToken.balance) && (
-                        <div
-                          className={`mt-3 rounded-xl p-3 border ${
-                            darkMode ? 'bg-red-900/20 border-red-700 text-red-300' : 'bg-red-50 border-red-200 text-red-700'
-                          }`}
-                        >
+                        <div className={`mt-3 rounded-xl p-3 border ${darkMode ? 'bg-red-900/20 border-red-700 text-red-300' : 'bg-red-50 border-red-200 text-red-700'}`}>
                           <AlertCircle className="w-5 h-5 inline mr-2" />
                           {t('asset.amountExceeds')}
                         </div>
@@ -461,7 +470,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
 
                       {/* Quick buttons */}
                       <div className="grid grid-cols-4 gap-2 mt-4">
-                        {['25%', '50%', '75%', '100%'].map((pct) => (
+                        {['25%', '50%', '75%', '100%'].map(pct => (
                           <button
                             key={pct}
                             onClick={() => {
@@ -517,11 +526,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                         }
                         if (priceError) {
                           return (
-                            <div
-                              className={`rounded-xl p-3 border ${
-                                darkMode ? 'bg-orange-900/20 border-orange-700 text-orange-300' : 'bg-orange-50 border-orange-200 text-orange-700'
-                              }`}
-                            >
+                            <div className={`rounded-xl p-3 border ${darkMode ? 'bg-orange-900/20 border-orange-700 text-orange-300' : 'bg-orange-50 border-orange-200 text-orange-700'}`}>
                               <AlertCircle className="w-5 h-5 inline mr-2" />
                               {priceError} — you can still proceed; price will be calculated manually during processing.
                             </div>
@@ -587,10 +592,9 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
                             }
                           }, 100);
                         }}
-                        disabled={
-                          !selectedToken || !tradeAmount || parseFloat(tradeAmount) <= 0 || Number(tradeAmount) > Number(selectedToken.balance)
-                        }
+                        disabled={!selectedToken || !tradeAmount || parseFloat(tradeAmount) <= 0 || Number(tradeAmount) > Number(selectedToken.balance)}
                         className={`bg-gradient-to-r ${themeClasses.gradient} text-white px-8 py-4 rounded-2xl font-semibold hover:shadow-xl disabled:opacity-50 inline-flex items-center`}
+                        aria-label="Proceed to payout selection"
                       >
                         {t('asset.nextPayout')} <ArrowRight className="w-5 h-5 ml-2" />
                       </button>
