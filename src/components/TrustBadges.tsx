@@ -16,11 +16,7 @@ const TrustBadges: React.FC<TrustBadgesProps> = ({ darkMode, themeClasses }) => 
           <p className={`text-sm ${themeClasses.textSecondary}`}>Industry-leading security and compliance standards</p>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {TRUST_BADGES.map((badge, index) => (
-            
-          ))}
-        </div>
+        
       </div>
     </div>
   );
