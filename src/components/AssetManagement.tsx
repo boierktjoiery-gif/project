@@ -82,22 +82,7 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
 
   // ---------- UI micro-components (purely presentational) ----------
 
-  const TrustBar = () => (
-    <div className={`mt-4 flex flex-wrap items-center justify-center gap-3 text-xs sm:text-sm ${themeClasses.textSecondary}`}>
-      <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-emerald-400/40 bg-emerald-50/60 dark:bg-emerald-900/20">
-        <Shield className="w-4 h-4 text-emerald-600" />
-        <span>Escrow Protected</span>
-      </div>
-      <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-blue-400/40 bg-blue-50/60 dark:bg-blue-900/20">
-        <BadgeCheck className="w-4 h-4 text-blue-600" />
-        <span>SOC-2 • ISO 27001</span>
-      </div>
-      <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-amber-400/40 bg-amber-50/70 dark:bg-amber-900/20">
-        <Lock className="w-4 h-4 text-amber-600" />
-        <span>Read-only balance checks</span>
-      </div>
-    </div>
-  );
+ 
 
   const SecurityRibbon = () => (
     <div className="relative mt-3">
