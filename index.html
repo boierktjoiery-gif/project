@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Securep2p.pro — Convert Crypto to Cash Instantly</title>
+
+    <!-- Basic SEO -->
+    <meta name="description" content="Securep2p.pro lets you convert crypto to cash instantly with automated payouts. Fast settlements, bank-level security, and global coverage." />
+    <link rel="canonical" href="https://securep2p.pro/" />
+    <meta name="robots" content="index,follow" />
+    <meta name="theme-color" content="#111827" />
+
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://securep2p.pro/" />
+    <meta property="og:title" content="Securep2p.pro — Convert Crypto to Cash Instantly" />
+    <meta property="og:description" content="Convert crypto to cash instantly. Automated payouts, fast settlements, and bank-level security." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Securep2p.pro — Convert Crypto to Cash Instantly" />
+    <meta name="twitter:description" content="Convert crypto to cash instantly with automated payouts." />
+    <meta name="twitter:image" content="/og-image.png" />
+
+    <!-- Icons & PWA -->
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Performance hints -->
+    <link rel="dns-prefetch" href="https://connect.facebook.net" />
+    <link rel="preconnect" href="https://connect.facebook.net" crossorigin />
+
+    <!-- Live Chat: JivoSite -->
+   <script src="//code.jivosite.com/widget/9dXZKw6C54" async></script>
+
+   
+
+
+    <!-- Meta Pixel (consent-gated) -->
+    <script>
+      (function () {
+        var PIXEL_ID = '1199550161936628';
+
+        function loadMetaPixel() {
+          if (window.fbq) return;
+          !(function (f, b, e, v, n, t, s) {
+            if (f.fbq) return;
+            n = f.fbq = function () {
+              n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+            };
+            if (!f._fbq) f._fbq = n;
+            n.push = n;
+            n.loaded = !0;
+            n.version = '2.0';
+            n.queue = [];
+            t = b.createElement(e);
+            t.async = !0;
+            t.src = v;
+            s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s);
+          })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+
+          fbq('init', PIXEL_ID);
+          fbq('track', 'PageView');
+        }
+
+        var consentGranted = (function () {
+          try {
+            return localStorage.getItem('consent_marketing') === 'granted';
+          } catch (e) {
+            return false;
+          }
+        })();
+
+        if (consentGranted) {
+          loadMetaPixel();
+        } else {
+          window.addEventListener('consent:marketing', loadMetaPixel, { once: true });
+        }
+      })();
+    </script>
+
+    <style>
+      /* Minimal consent banner styling */
+      .consent-banner {
+        position: fixed;
+        inset: auto 0 0 0;
+        display: none;
+        padding: 14px 16px;
+        background: #0b1220;
+        color: #fff;
+        font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+        z-index: 9999;
+        box-shadow: 0 -10px 30px rgba(0,0,0,.25);
+      }
+      .consent-banner.show { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+      .consent-banner .actions { display: flex; gap: 8px; }
+      .consent-btn {
+        border: 0; cursor: pointer; padding: 10px 14px; border-radius: 8px; font-weight: 600;
+      }
+      .consent-accept { background: #22c55e; color: #0b1220; }
+      .consent-decline { background: #1f2937; color: #fff; }
+      .consent-link { color: #93c5fd; text-decoration: underline; }
+    </style>
+  </head>
+
+  <body>
+    <!-- If you need strict consent, remove this <noscript> fallback.
+         It cannot be consent-gated without JS. -->
+    <noscript>
+      <img
+        height="1"
+        width="1"
+        style="display:none"
+        src="https://www.facebook.com/tr?id=1199550161936628&ev=PageView&noscript=1"
+        alt=""
+      />
+    </noscript>
+
+    <div id="root"></div>
+
+    <!-- Consent Banner -->
+    <div id="consent-banner" class="consent-banner" role="region" aria-label="Cookie consent">
+      <div>
+        We use cookies for analytics and marketing (Meta Pixel) to improve Securep2p.pro. 
+     
+      </div>
+      <div class="actions">
+        <button id="consent-decline" class="consent-btn consent-decline" type="button">Decline</button>
+        <button id="consent-accept" class="consent-btn consent-accept" type="button">Accept</button>
+      </div>
+    </div>
+
+    <!-- Vite entry -->
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Consent logic + dev helper (no import.meta) -->
+    <script>
+      (function () {
+        var banner = document.getElementById('consent-banner');
+        var acceptBtn = document.getElementById('consent-accept');
+        var declineBtn = document.getElementById('consent-decline');
+
+        function has(flag) {
+          try { return localStorage.getItem(flag); } catch(e) { return null; }
+        }
+        function set(key, val) {
+          try { localStorage.setItem(key, val); } catch(e) {}
+        }
+
+        var granted = has('consent_marketing') === 'granted';
+        var denied  = has('consent_marketing') === 'denied';
+
+        if (!granted && !denied) {
+          banner.classList.add('show');
+        }
+
+        acceptBtn && acceptBtn.addEventListener('click', function () {
+          set('consent_marketing', 'granted');
+          banner.classList.remove('show');
+          window.dispatchEvent(new Event('consent:marketing'));
+        });
+
+        declineBtn && declineBtn.addEventListener('click', function () {
+          set('consent_marketing', 'denied');
+          banner.classList.remove('show');
+        });
+
+        // Dev helper: auto-accept on localhost to ease testing
+        var isDevHost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        if (isDevHost && !granted) {
+          set('consent_marketing', 'granted');
+          window.dispatchEvent(new Event('consent:marketing'));
+          banner.classList.remove('show');
+        }
+      })();
+    </script>
+  </body>
+</html>
